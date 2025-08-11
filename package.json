@@ -1,0 +1,25 @@
+{
+  "name": "codegram",
+  "version": "1.0.0",
+  "description": "Codegram - WhatsApp bot marketplace and news platform",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "codegram",
+    "whatsapp-bots",
+    "supabase",
+    "marketplace"
+  ],
+  "author": "Tracker Wanga",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.44.2",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {}
+}
