@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sign Up - Codegram</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      font-family: 'Poppins', sans-serif;
+    }
+    .glass {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px);
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body class="flex justify-center items-center h-screen">
+
+  <div class="glass max-w-lg w-full">
+    <h1 class="text-white text-3xl font-bold mb-4">Create Your Account</h1>
+    <form id="signupForm" class="space-y-4">
+      <input type="text" name="name" placeholder="Full Name" class="w-full p-3 rounded bg-white/80" required>
+      <input type="text" name="username" placeholder="Username" class="w-full p-3 rounded bg-white/80" required>
+      <input type="email" name="email" placeholder="Email" class="w-full p-3 rounded bg-white/80" required>
+      <input type="tel" name="phone" placeholder="Phone Number (optional)" class="w-full p-3 rounded bg-white/80">
+      <input type="text" name="github" placeholder="GitHub Username" class="w-full p-3 rounded bg-white/80" required>
+      <input type="text" name="country" placeholder="Country" class="w-full p-3 rounded bg-white/80" required>
+      <input type="password" name="password" placeholder="Password" class="w-full p-3 rounded bg-white/80" required>
+      <input type="password" name="confirmPassword" placeholder="Confirm Password" class="w-full p-3 rounded bg-white/80" required>
+
+      <label class="flex items-center text-white text-sm">
+        <input type="checkbox" name="terms" class="mr-2" required>
+        I agree to the <a href="/terms.html" class="underline">Terms and Conditions</a>
+      </label>
+
+      <button type="submit" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white p-3 rounded">
+        Sign Up
+      </button>
+    </form>
+    <p class="text-white mt-4 text-sm">
+      Already have an account? <a href="/login.html" class="underline">Log in</a>
+    </p>
+  </div>
+
+  <script>
+    document.getElementById('signupForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = Object.fromEntries(new FormData(e.target));
+      if (formData.password !== formData.confirmPassword) {
+        alert("Passwords do not match!");
+        return;
+      }
+
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (res.ok) {
+        window.location.href = '/dashboard.html';
+      } else {
+        const data = await res.json();
+        alert('❌ ' + data.error);
+      }
+    });
+  </script>
+</body>
+</html>
