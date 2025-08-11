@@ -1,128 +1,85 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
   <title>Sign Up - Codegram</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script defer src="/signup.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+      background-color: #0d0d0d;
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 2rem;
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      width: 100%;
+      max-width: 400px;
+    }
+    input, button {
+      width: 100%;
+      padding: 0.75rem;
+      margin: 0.5rem 0;
+      border-radius: 8px;
+      border: none;
+      font-size: 1rem;
+    }
+    input {
+      background: rgba(255, 255, 255, 0.1);
       color: white;
     }
-    .glass {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+    button {
+      background: #00ff88;
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
     .spinner {
-      border: 3px solid rgba(255, 255, 255, 0.1);
-      border-top: 3px solid #4f46e5;
+      display: none;
+      border: 4px solid rgba(255,255,255,0.2);
+      border-top: 4px solid #00ff88;
       border-radius: 50%;
-      width: 20px;
-      height: 20px;
-      animation: spin 1s linear infinite;
-      display: inline-block;
-      vertical-align: middle;
+      width: 24px;
+      height: 24px;
+      animation: spin 0.8s linear infinite;
+      margin: auto;
     }
     @keyframes spin {
-      0% { transform: rotate(0deg);}
-      100% { transform: rotate(360deg);}
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
-<body class="flex items-center justify-center min-h-screen px-4">
-  <div class="glass p-8 rounded-2xl shadow-lg w-full max-w-md">
-    <h1 class="text-3xl font-bold mb-6 text-center">Create an Account</h1>
-    <form id="signup-form" class="space-y-4">
-      <input type="text" id="full_name" placeholder="Full Name" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
-      <input type="text" id="username" placeholder="Username" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
-      <input type="email" id="email" placeholder="Email" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
-      <input type="tel" id="phone" placeholder="Phone (Optional)" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none">
-      <input type="text" id="github_username" placeholder="GitHub Username" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
-      <input type="text" id="country" placeholder="Country" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
-      <input type="password" id="password" placeholder="Password" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
-      <input type="password" id="confirm_password" placeholder="Confirm Password" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
-      <label class="flex items-center text-sm">
-        <input type="checkbox" id="terms" class="mr-2" required>
-        I agree to the terms and conditions
+<body>
+  <div class="container">
+    <h2>Create Account</h2>
+    <form id="signup-form">
+      <input type="text" name="name" placeholder="Full Name" required>
+      <input type="text" name="username" placeholder="Username" required>
+      <input type="email" name="email" placeholder="Email" required>
+      <input type="tel" name="phone" placeholder="Phone Number (optional)">
+      <input type="text" name="github" placeholder="GitHub Username" required>
+      <input type="text" name="country" placeholder="Country" required>
+      <input type="password" name="password" placeholder="Password" required>
+      <input type="password" name="confirm_password" placeholder="Confirm Password" required>
+      <label>
+        <input type="checkbox" name="terms" required> I agree to the Terms and Conditions
       </label>
-      <button type="submit" id="signup-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded font-semibold transition">Sign Up</button>
-      <p class="text-center text-sm mt-4">Already have an account? <a href="/login" class="text-indigo-400 hover:underline">Log in</a></p>
+      <button type="submit">Sign Up</button>
+      <div class="spinner"></div>
     </form>
-    <p id="message" class="mt-4 text-center text-sm text-green-400"></p>
+    <p style="margin-top:1rem;">Already have an account? <a href="/login/">Login</a></p>
   </div>
-
-  <script>
-    const SUPABASE_URL = "https://rqdqlfkhbriucivafffy.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxZHFsZmtoYnJpdWNpdmFmZmZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NDY0MTIsImV4cCI6MjA3MDMyMjQxMn0.Ix35oEpSElPz7AS039wZoHkTNHFsJcmePQfgOwUlxFY";
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    const form = document.getElementById('signup-form');
-    const message = document.getElementById('message');
-    const signupBtn = document.getElementById('signup-btn');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      message.textContent = '';
-
-      const full_name = document.getElementById('full_name').value.trim();
-      const username = document.getElementById('username').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const phone = document.getElementById('phone').value.trim();
-      const github_username = document.getElementById('github_username').value.trim();
-      const country = document.getElementById('country').value.trim();
-      const password = document.getElementById('password').value;
-      const confirm_password = document.getElementById('confirm_password').value;
-      const terms = document.getElementById('terms').checked;
-
-      if (password !== confirm_password) {
-        message.textContent = 'Passwords do not match!';
-        return;
-      }
-
-      if (!terms) {
-        message.textContent = 'You must agree to the terms.';
-        return;
-      }
-
-      signupBtn.innerHTML = '<span class="spinner"></span> Creating account...';
-
-      const { data, error } = await supabaseClient.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name, username, phone, github_username, country }
-        }
-      });
-
-      if (error) {
-        message.textContent = error.message;
-        signupBtn.innerHTML = 'Sign Up';
-        return;
-      }
-
-      // Insert into profiles table
-      await supabaseClient.from('profiles').insert([{
-        id: data.user.id,
-        full_name,
-        username,
-        email,
-        phone,
-        github_username,
-        country
-      }]);
-
-      message.textContent = 'Please confirm your email for instant verification.';
-      signupBtn.innerHTML = 'Sign Up';
-
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 3000);
-    });
-  </script>
 </body>
   </html>
