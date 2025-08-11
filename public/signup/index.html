@@ -1,75 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Sign Up - Codegram</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
-      background: linear-gradient(135deg, #667eea, #764ba2);
-      font-family: 'Poppins', sans-serif;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+      color: white;
     }
     .glass {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
       backdrop-filter: blur(12px);
-      border-radius: 12px;
-      padding: 2rem;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top: 3px solid #4f46e5;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
     }
   </style>
 </head>
-<body class="flex justify-center items-center h-screen">
-
-  <div class="glass max-w-lg w-full">
-    <h1 class="text-white text-3xl font-bold mb-4">Create Your Account</h1>
-    <form id="signupForm" class="space-y-4">
-      <input type="text" name="name" placeholder="Full Name" class="w-full p-3 rounded bg-white/80" required>
-      <input type="text" name="username" placeholder="Username" class="w-full p-3 rounded bg-white/80" required>
-      <input type="email" name="email" placeholder="Email" class="w-full p-3 rounded bg-white/80" required>
-      <input type="tel" name="phone" placeholder="Phone Number (optional)" class="w-full p-3 rounded bg-white/80">
-      <input type="text" name="github" placeholder="GitHub Username" class="w-full p-3 rounded bg-white/80" required>
-      <input type="text" name="country" placeholder="Country" class="w-full p-3 rounded bg-white/80" required>
-      <input type="password" name="password" placeholder="Password" class="w-full p-3 rounded bg-white/80" required>
-      <input type="password" name="confirmPassword" placeholder="Confirm Password" class="w-full p-3 rounded bg-white/80" required>
-
-      <label class="flex items-center text-white text-sm">
-        <input type="checkbox" name="terms" class="mr-2" required>
-        I agree to the <a href="/terms.html" class="underline">Terms and Conditions</a>
+<body class="flex items-center justify-center min-h-screen px-4">
+  <div class="glass p-8 rounded-2xl shadow-lg w-full max-w-md">
+    <h1 class="text-3xl font-bold mb-6 text-center">Create an Account</h1>
+    <form id="signup-form" class="space-y-4">
+      <input type="text" id="full_name" placeholder="Full Name" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
+      <input type="text" id="username" placeholder="Username" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
+      <input type="email" id="email" placeholder="Email" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
+      <input type="tel" id="phone" placeholder="Phone (Optional)" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none">
+      <input type="text" id="github_username" placeholder="GitHub Username" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
+      <input type="text" id="country" placeholder="Country" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
+      <input type="password" id="password" placeholder="Password" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
+      <input type="password" id="confirm_password" placeholder="Confirm Password" class="w-full px-4 py-2 rounded bg-transparent border border-gray-600 focus:outline-none" required>
+      <label class="flex items-center text-sm">
+        <input type="checkbox" id="terms" class="mr-2" required>
+        I agree to the terms and conditions
       </label>
-
-      <button type="submit" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white p-3 rounded">
-        Sign Up
-      </button>
+      <button type="submit" id="signup-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 py-2 rounded font-semibold transition">Sign Up</button>
+      <p class="text-center text-sm mt-4">Already have an account? <a href="/login" class="text-indigo-400 hover:underline">Log in</a></p>
     </form>
-    <p class="text-white mt-4 text-sm">
-      Already have an account? <a href="/login.html" class="underline">Log in</a>
-    </p>
+    <p id="message" class="mt-4 text-center text-sm text-green-400"></p>
   </div>
 
   <script>
-    document.getElementById('signupForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
+    const SUPABASE_URL = "https://rqdqlfkhbriucivafffy.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJxZHFsZmtoYnJpdWNpdmFmZmZ5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ3NDY0MTIsImV4cCI6MjA3MDMyMjQxMn0.Ix35oEpSElPz7AS039wZoHkTNHFsJcmePQfgOwUlxFY";
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      const formData = Object.fromEntries(new FormData(e.target));
-      if (formData.password !== formData.confirmPassword) {
-        alert("Passwords do not match!");
+    const form = document.getElementById('signup-form');
+    const message = document.getElementById('message');
+    const signupBtn = document.getElementById('signup-btn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      message.textContent = '';
+
+      const full_name = document.getElementById('full_name').value.trim();
+      const username = document.getElementById('username').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      const github_username = document.getElementById('github_username').value.trim();
+      const country = document.getElementById('country').value.trim();
+      const password = document.getElementById('password').value;
+      const confirm_password = document.getElementById('confirm_password').value;
+      const terms = document.getElementById('terms').checked;
+
+      if (password !== confirm_password) {
+        message.textContent = 'Passwords do not match!';
         return;
       }
 
-      const res = await fetch('/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+      if (!terms) {
+        message.textContent = 'You must agree to the terms.';
+        return;
+      }
+
+      signupBtn.innerHTML = '<span class="spinner"></span> Creating account...';
+
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { full_name, username, phone, github_username, country }
+        }
       });
 
-      if (res.ok) {
-        window.location.href = '/dashboard.html';
-      } else {
-        const data = await res.json();
-        alert('❌ ' + data.error);
+      if (error) {
+        message.textContent = error.message;
+        signupBtn.innerHTML = 'Sign Up';
+        return;
       }
+
+      // Insert into profiles table
+      await supabaseClient.from('profiles').insert([{
+        id: data.user.id,
+        full_name,
+        username,
+        email,
+        phone,
+        github_username,
+        country
+      }]);
+
+      message.textContent = 'Please confirm your email for instant verification.';
+      signupBtn.innerHTML = 'Sign Up';
+
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 3000);
     });
   </script>
 </body>
-</html>
+  </html>
