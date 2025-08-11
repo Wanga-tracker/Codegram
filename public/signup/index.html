@@ -5,7 +5,6 @@
   <title>Sign Up - Codegram</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <script defer src="/signup.js"></script>
   <style>
     body {
       font-family: 'Inter', sans-serif;
@@ -81,5 +80,35 @@
     </form>
     <p style="margin-top:1rem;">Already have an account? <a href="/login/">Login</a></p>
   </div>
+
+  <script>
+    const form = document.getElementById('signup-form');
+    const spinner = document.querySelector('.spinner');
+    const button = form.querySelector('button');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      spinner.style.display = 'block';
+      button.disabled = true;
+
+      const formData = Object.fromEntries(new FormData(form).entries());
+
+      const res = await fetch('/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      const data = await res.json();
+      spinner.style.display = 'none';
+      button.disabled = false;
+
+      if (data.error) {
+        alert(data.error);
+      } else {
+        alert(data.message);
+      }
+    });
+  </script>
 </body>
-  </html>
+</html>
