@@ -45,5 +45,11 @@ export default function Navbar() {
         </div>
       )}
     </nav>
+      
+    <img 
+  src="/IMG-20250812-WA0043.jpg" 
+  alt="Codegram Logo" 
+  className="h-10 w-10 object-cover rounded-full border-2 border-[#00FF9F]"
+/>
   );
 }
