@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { supabase } from "../lib/supabaseClient";
 
 export default function SignUpPage() {
@@ -10,7 +11,7 @@ export default function SignUpPage() {
     email: "",
     password: "",
     username: "",
-    name: "",
+    full_name: "",
     country: "",
     agree: false,
   });
@@ -39,7 +40,6 @@ export default function SignUpPage() {
     setLoading(true);
 
     try {
-      // Step 1: Create account in Supabase Auth
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: form.email,
         password: form.password,
@@ -50,13 +50,12 @@ export default function SignUpPage() {
       const userId = authData.user?.id;
       if (!userId) throw new Error("Signup failed: No user ID returned");
 
-      // Step 2: Insert profile
       const { error: profileError } = await supabase.from("profiles").insert([
         {
-          id: userId, // matches auth.users.id
+          id: userId,
           email: form.email,
           username: form.username,
-          name: form.name, // ✅ matches DB column
+          full_name: form.full_name,
           country: form.country,
           role: "user",
         },
@@ -64,12 +63,10 @@ export default function SignUpPage() {
 
       if (profileError) throw profileError;
 
-      // Step 3: Show success and redirect
       setSuccess("✅ Welcome to Codegram! Have fun 🎉");
       setTimeout(() => {
         router.push("/dashboard");
       }, 1500);
-
     } catch (err) {
       console.error(err);
       setError("❌ Error signing you up, please try again later.");
@@ -79,15 +76,29 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-      <form
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-black p-4">
+      <motion.form
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: "easeOut" }}
         onSubmit={handleSignup}
-        className="bg-white shadow-lg rounded-xl p-6 w-full max-w-md space-y-4"
+        className="relative bg-white/10 backdrop-blur-lg border border-white/20 shadow-2xl rounded-2xl p-8 w-full max-w-md space-y-5"
       >
-        <h1 className="text-2xl font-bold text-center">Sign Up</h1>
+        {/* Logo */}
+        <div className="flex justify-center mb-4">
+          <img
+            src="/logo.png"
+            alt="Codegram Logo"
+            className="w-20 h-20 object-contain drop-shadow-lg"
+          />
+        </div>
 
-        {error && <p className="text-red-500">{error}</p>}
-        {success && <p className="text-green-600">{success}</p>}
+        <h1 className="text-3xl font-extrabold text-center text-white drop-shadow-md">
+          Create Your Account
+        </h1>
+
+        {error && <p className="text-red-400 text-center">{error}</p>}
+        {success && <p className="text-green-400 text-center">{success}</p>}
 
         <input
           name="email"
@@ -96,7 +107,7 @@ export default function SignUpPage() {
           required
           value={form.email}
           onChange={handleChange}
-          className="w-full p-2 border rounded-lg"
+          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
         />
 
         <input
@@ -106,7 +117,7 @@ export default function SignUpPage() {
           required
           value={form.password}
           onChange={handleChange}
-          className="w-full p-2 border rounded-lg"
+          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
         />
 
         <input
@@ -115,15 +126,15 @@ export default function SignUpPage() {
           required
           value={form.username}
           onChange={handleChange}
-          className="w-full p-2 border rounded-lg"
+          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
         />
 
         <input
-          name="name"
+          name="full_name"
           placeholder="Full Name"
-          value={form.name}
+          value={form.full_name}
           onChange={handleChange}
-          className="w-full p-2 border rounded-lg"
+          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
         />
 
         <select
@@ -131,7 +142,7 @@ export default function SignUpPage() {
           required
           value={form.country}
           onChange={handleChange}
-          className="w-full p-2 border rounded-lg"
+          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
         >
           <option value="">Select Country</option>
           <option value="Kenya">Kenya</option>
@@ -140,12 +151,13 @@ export default function SignUpPage() {
           <option value="India">India</option>
         </select>
 
-        <label className="flex items-center space-x-2">
+        <label className="flex items-center space-x-2 text-white">
           <input
             type="checkbox"
             name="agree"
             checked={form.agree}
             onChange={handleChange}
+            className="accent-blue-500"
           />
           <span>I agree to the Terms and Conditions</span>
         </label>
@@ -153,11 +165,11 @@ export default function SignUpPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"
+          className="w-full py-3 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold shadow-lg hover:opacity-90 transition-all duration-200"
         >
           {loading ? "Signing up..." : "Sign Up"}
         </button>
-      </form>
+      </motion.form>
     </div>
   );
-                                   }
+}
