@@ -55,7 +55,7 @@ export default function SignUp() {
     toast.dismiss();
     toast.loading("Creating your account...", { id: "creating" });
 
-    // 1️⃣ Sign up the user in Supabase Auth
+    // 1️⃣ Sign up in Supabase Auth
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
@@ -68,15 +68,31 @@ export default function SignUp() {
       return;
     }
 
-    // 2️⃣ Insert into public.profiles (matches SQL schema)
+    // 2️⃣ Get the user ID
+    let userId = signUpData?.user?.id;
+
+    // If email confirmation is ON, userId might be null
+    if (!userId) {
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData?.session) {
+        toast.remove("creating");
+        toast.error("Account created. Please check your email to confirm.");
+        setLoading(false);
+        return;
+      }
+      userId = sessionData.session.user.id;
+    }
+
+    // 3️⃣ Insert into public.profiles
     const { error: profileError } = await supabase.from("profiles").insert([
       {
-        id: signUpData.user.id, // must match auth.users.id
+        id: userId,
         full_name: form.fullName,
         username: form.username,
         email: form.email,
         country: form.country,
         referral_code: form.referralCode,
+        role: "user",
       },
     ]);
 
@@ -84,12 +100,13 @@ export default function SignUp() {
 
     if (profileError) {
       toast.error("Account created, but failed to save profile.");
-      console.error(profileError);
+      console.error("Profile insert error:", profileError);
       setLoading(false);
       return;
     }
 
-    toast.success("Welcome to Codegram! Have fun 🚀", {
+    // 4️⃣ Success
+    toast.success("Welcome to Codegram! 🚀", {
       style: { background: "#00FF9F", color: "#000", fontWeight: "700" },
     });
 
@@ -121,56 +138,16 @@ export default function SignUp() {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          <input
-            type="text"
-            name="fullName"
-            placeholder="Full Name"
-            value={form.fullName}
-            onChange={handleChange}
-            className="input-style"
-          />
-          <input
-            type="text"
-            name="username"
-            placeholder="Username"
-            value={form.username}
-            onChange={handleChange}
-            className="input-style"
-          />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={form.email}
-            onChange={handleChange}
-            className="input-style"
-          />
+          <input type="text" name="fullName" placeholder="Full Name" value={form.fullName} onChange={handleChange} className="input-style" />
+          <input type="text" name="username" placeholder="Username" value={form.username} onChange={handleChange} className="input-style" />
+          <input type="email" name="email" placeholder="Email" value={form.email} onChange={handleChange} className="input-style" />
 
           <div className="grid sm:grid-cols-2 gap-3">
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={handleChange}
-              className="input-style"
-            />
-            <input
-              type="password"
-              name="confirmPassword"
-              placeholder="Confirm Password"
-              value={form.confirmPassword}
-              onChange={handleChange}
-              className="input-style"
-            />
+            <input type="password" name="password" placeholder="Password" value={form.password} onChange={handleChange} className="input-style" />
+            <input type="password" name="confirmPassword" placeholder="Confirm Password" value={form.confirmPassword} onChange={handleChange} className="input-style" />
           </div>
 
-          <select
-            name="country"
-            value={form.country}
-            onChange={handleChange}
-            className="input-style"
-          >
+          <select name="country" value={form.country} onChange={handleChange} className="input-style">
             <option value="">Select your country</option>
             <option value="Kenya">Kenya</option>
             <option value="United States">United States</option>
@@ -183,13 +160,7 @@ export default function SignUp() {
           </select>
 
           <div className="flex items-center space-x-3">
-            <input
-              type="checkbox"
-              name="agree"
-              checked={form.agree}
-              onChange={handleChange}
-              className="w-4 h-4 accent-[#00FF9F]"
-            />
+            <input type="checkbox" name="agree" checked={form.agree} onChange={handleChange} className="w-4 h-4 accent-[#00FF9F]" />
             <label className="text-gray-300 text-sm">
               I agree to the{" "}
               <span className="text-[#00FF9F] hover:underline cursor-pointer">
@@ -227,4 +198,4 @@ export default function SignUp() {
       `}</style>
     </div>
   );
-  }
+    }
