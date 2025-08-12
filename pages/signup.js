@@ -1,23 +1,31 @@
-"use client";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+// pages/signup.js
+import { useEffect, useState } from "react";
+import { useRouter } from "next/router";
+import toast, { Toaster } from "react-hot-toast";
+import Image from "next/image";
 import { supabase } from "../lib/supabaseClient";
 
-export default function SignUpPage() {
+function generateReferral() {
+  return "CG" + Math.random().toString(36).slice(2, 8).toUpperCase();
+}
+
+export default function SignUp() {
   const router = useRouter();
   const [form, setForm] = useState({
+    fullName: "",
+    username: "",
     email: "",
     password: "",
-    username: "",
-    full_name: "",
+    confirmPassword: "",
     country: "",
     agree: false,
+    referralCode: "",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    setForm((prev) => ({ ...prev, referralCode: generateReferral() }));
+  }, []);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -27,149 +35,196 @@ export default function SignUpPage() {
     }));
   };
 
-  const handleSignup = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
+  const validate = () => {
+    if (!form.fullName.trim()) return toast.error("Please enter your full name.");
+    if (!form.username.trim()) return toast.error("Please choose a username.");
+    if (!form.email.trim()) return toast.error("Please enter your email.");
+    if (!form.password) return toast.error("Please enter a password.");
+    if (form.password !== form.confirmPassword)
+      return toast.error("Passwords do not match.");
+    if (!form.country) return toast.error("Please select your country.");
+    if (!form.agree) return toast.error("You must agree to the Terms & Conditions.");
+    return true;
+  };
 
-    if (!form.agree) {
-      setError("Please agree to the Terms and Conditions");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    setLoading(true);
+    toast.dismiss();
+    toast.loading("Creating your account...", { id: "creating" });
+
+    // 1️⃣ Sign up the user in Supabase Auth
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+    });
+
+    if (signUpError) {
+      toast.remove("creating");
+      toast.error(signUpError.message || "Error signing you up. Please try again.");
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-
-    try {
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+    // 2️⃣ Insert into public.profiles (matches SQL schema)
+    const { error: profileError } = await supabase.from("profiles").insert([
+      {
+        id: signUpData.user.id, // must match auth.users.id
+        full_name: form.fullName,
+        username: form.username,
         email: form.email,
-        password: form.password,
-      });
+        country: form.country,
+        referral_code: form.referralCode,
+      },
+    ]);
 
-      if (signUpError) throw signUpError;
+    toast.remove("creating");
 
-      const userId = authData.user?.id;
-      if (!userId) throw new Error("Signup failed: No user ID returned");
-
-      const { error: profileError } = await supabase.from("profiles").insert([
-        {
-          id: userId,
-          email: form.email,
-          username: form.username,
-          full_name: form.full_name,
-          country: form.country,
-          role: "user",
-        },
-      ]);
-
-      if (profileError) throw profileError;
-
-      setSuccess("✅ Welcome to Codegram! Have fun 🎉");
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 1500);
-    } catch (err) {
-      console.error(err);
-      setError("❌ Error signing you up, please try again later.");
-    } finally {
+    if (profileError) {
+      toast.error("Account created, but failed to save profile.");
+      console.error(profileError);
       setLoading(false);
+      return;
     }
+
+    toast.success("Welcome to Codegram! Have fun 🚀", {
+      style: { background: "#00FF9F", color: "#000", fontWeight: "700" },
+    });
+
+    setTimeout(() => router.push("/dashboard"), 1400);
+    setLoading(false);
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-blue-900 to-black p-4">
-      <motion.form
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.7, ease: "easeOut" }}
-        onSubmit={handleSignup}
-        className="relative bg-white/10 backdrop-blur-lg border border-white/20 shadow-2xl rounded-2xl p-8 w-full max-w-md space-y-5"
-      >
+    <div className="min-h-screen bg-black text-white flex items-center justify-center px-4">
+      <Toaster position="top-right" />
+      <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-8 w-full max-w-md shadow-xl">
         {/* Logo */}
         <div className="flex justify-center mb-4">
-          <img
-            src="/logo.png"
+          <Image
+            src="/IMG-20250812-WA0043.jpg"
             alt="Codegram Logo"
-            className="w-20 h-20 object-contain drop-shadow-lg"
+            width={64}
+            height={64}
+            className="rounded-full border-2 border-[#00FF9F] shadow-[0_0_20px_#00FF9F]/30"
           />
         </div>
 
-        <h1 className="text-3xl font-extrabold text-center text-white drop-shadow-md">
-          Create Your Account
+        <h1 className="text-3xl font-bold text-center mb-1">
+          <span className="text-[#9D00FF]">Join</span>{" "}
+          <span className="text-[#00FF9F]">Codegram</span>
         </h1>
+        <p className="text-center text-gray-400 mb-6">
+          Create your account to explore WhatsApp bots & tools
+        </p>
 
-        {error && <p className="text-red-400 text-center">{error}</p>}
-        {success && <p className="text-green-400 text-center">{success}</p>}
-
-        <input
-          name="email"
-          placeholder="Email"
-          type="email"
-          required
-          value={form.email}
-          onChange={handleChange}
-          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
-        />
-
-        <input
-          name="password"
-          placeholder="Password"
-          type="password"
-          required
-          value={form.password}
-          onChange={handleChange}
-          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
-        />
-
-        <input
-          name="username"
-          placeholder="Username"
-          required
-          value={form.username}
-          onChange={handleChange}
-          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
-        />
-
-        <input
-          name="full_name"
-          placeholder="Full Name"
-          value={form.full_name}
-          onChange={handleChange}
-          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
-        />
-
-        <select
-          name="country"
-          required
-          value={form.country}
-          onChange={handleChange}
-          className="w-full p-3 rounded-lg bg-white/20 text-white placeholder-gray-300 focus:ring-2 focus:ring-blue-400 outline-none"
-        >
-          <option value="">Select Country</option>
-          <option value="Kenya">Kenya</option>
-          <option value="USA">USA</option>
-          <option value="UK">UK</option>
-          <option value="India">India</option>
-        </select>
-
-        <label className="flex items-center space-x-2 text-white">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <input
-            type="checkbox"
-            name="agree"
-            checked={form.agree}
+            type="text"
+            name="fullName"
+            placeholder="Full Name"
+            value={form.fullName}
             onChange={handleChange}
-            className="accent-blue-500"
+            className="input-style"
           />
-          <span>I agree to the Terms and Conditions</span>
-        </label>
+          <input
+            type="text"
+            name="username"
+            placeholder="Username"
+            value={form.username}
+            onChange={handleChange}
+            className="input-style"
+          />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email"
+            value={form.email}
+            onChange={handleChange}
+            className="input-style"
+          />
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full py-3 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold shadow-lg hover:opacity-90 transition-all duration-200"
-        >
-          {loading ? "Signing up..." : "Sign Up"}
-        </button>
-      </motion.form>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <input
+              type="password"
+              name="password"
+              placeholder="Password"
+              value={form.password}
+              onChange={handleChange}
+              className="input-style"
+            />
+            <input
+              type="password"
+              name="confirmPassword"
+              placeholder="Confirm Password"
+              value={form.confirmPassword}
+              onChange={handleChange}
+              className="input-style"
+            />
+          </div>
+
+          <select
+            name="country"
+            value={form.country}
+            onChange={handleChange}
+            className="input-style"
+          >
+            <option value="">Select your country</option>
+            <option value="Kenya">Kenya</option>
+            <option value="United States">United States</option>
+            <option value="United Kingdom">United Kingdom</option>
+            <option value="Nigeria">Nigeria</option>
+            <option value="India">India</option>
+            <option value="Egypt">Egypt</option>
+            <option value="South Africa">South Africa</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              name="agree"
+              checked={form.agree}
+              onChange={handleChange}
+              className="w-4 h-4 accent-[#00FF9F]"
+            />
+            <label className="text-gray-300 text-sm">
+              I agree to the{" "}
+              <span className="text-[#00FF9F] hover:underline cursor-pointer">
+                Terms & Conditions
+              </span>
+            </label>
+          </div>
+
+          <input type="hidden" name="referralCode" value={form.referralCode} />
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-[#00FF9F] text-black font-bold py-2 px-4 rounded-lg hover:bg-[#00cc80] transition transform hover:scale-105 shadow-[0_0_20px_#00FF9F]"
+          >
+            {loading ? "Signing Up..." : "Sign Up"}
+          </button>
+        </form>
+      </div>
+
+      <style jsx>{`
+        .input-style {
+          width: 100%;
+          padding: 0.5rem 1rem;
+          border-radius: 0.5rem;
+          background-color: rgba(0, 0, 0, 0.6);
+          border: 1px solid #374151;
+          color: white;
+          outline: none;
+        }
+        .input-style:focus {
+          border-color: #00FF9F;
+          box-shadow: 0 0 0 2px #00ff9f40;
+        }
+      `}</style>
     </div>
   );
-}
+  }
