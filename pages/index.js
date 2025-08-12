@@ -1,81 +1,70 @@
-// pages/index.js
-import Navbar from '../components/Navbar'
+import Image from "next/image";
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white">
-      <Navbar />
-      
-      {/* Hero Section */}
-      <section className="text-center pt-24 px-6">
-        <h1 className="text-5xl font-extrabold mb-4">
-          Welcome to <span className="text-neon">Codegram 🚀</span>
-        </h1>
-        <p className="text-gray-400 max-w-2xl mx-auto">
-          Discover, deploy, and level-up your bots. Built for devs, powered by community — scaled for the future.
-        </p>
-        <div className="mt-6 flex justify-center gap-4">
+    <div className="min-h-screen bg-black text-white">
+      {/* Navbar */}
+      <nav className="flex justify-between items-center px-8 py-4 border-b border-gray-800">
+        <div className="flex items-center gap-3">
+          <Image
+            src="/IMG-20250812-WA0043.jpg"
+            alt="Logo"
+            width={40}
+            height={40}
+            className="rounded-full"
+          />
+          <h1 className="text-2xl font-bold">
+            <span className="text-[#00FF9F]">Code</span>
+            <span className="text-[#9D00FF]">Gram</span>
+          </h1>
+        </div>
+        <div className="flex gap-4">
           <a
             href="/signup"
-            className="px-6 py-3 bg-neon rounded-lg font-semibold text-black hover:shadow-neon transition"
+            className="px-5 py-2 rounded-lg font-semibold bg-[#00FF9F] text-black hover:scale-110 transition-transform duration-300 shadow-lg shadow-[#00FF9F]/50"
           >
             Get Started
           </a>
           <a
             href="/login"
-            className="px-6 py-3 bg-gray-800 border border-gray-700 rounded-lg font-semibold text-white hover:bg-gray-700 transition"
+            className="px-5 py-2 rounded-lg font-semibold bg-[#9D00FF] text-white hover:scale-110 transition-transform duration-300 shadow-lg shadow-[#9D00FF]/50"
           >
             Login
           </a>
         </div>
-      </section>
+      </nav>
 
-      {/* Features Section */}
-      <section className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 px-6 mt-16 max-w-6xl mx-auto">
-        {features.map((feature, idx) => (
+      {/* Hero Section */}
+      <header className="text-center py-20 px-4">
+        <h2 className="text-5xl font-extrabold mb-4">
+          <span className="text-[#9D00FF]">Next-Gen</span> Tech Hub
+        </h2>
+        <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+          Explore the latest WhatsApp bots, VPS servers, hosting tools, and more — built for devs who want to stay ahead.
+        </p>
+      </header>
+
+      {/* Cards Section */}
+      <section className="grid gap-8 px-6 sm:grid-cols-2 lg:grid-cols-3 max-w-6xl mx-auto pb-20">
+        {[
+          "Find latest Whatsapp bot",
+          "Find latest VPS servers",
+          "Get news on panel",
+          "Create and deploy static websites",
+          "Know more about Whatsapp bot",
+          "Exclusive tech insights"
+        ].map((title, i) => (
           <div
-            key={idx}
-            className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl border border-white/20 shadow-lg hover:shadow-neon transition"
+            key={i}
+            className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:scale-105 transition-transform duration-300 shadow-lg hover:shadow-[#00FF9F]/30"
           >
-            <div className="text-3xl mb-3">{feature.icon}</div>
-            <h3 className="text-xl font-bold mb-2">{feature.title}</h3>
-            <p className="text-gray-400">{feature.description}</p>
+            <h3 className="text-xl font-semibold mb-3 text-[#00FF9F]">{title}</h3>
+            <p className="text-gray-400 text-sm">
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit. Stay up-to-date with our curated tech updates.
+            </p>
           </div>
         ))}
       </section>
     </div>
-  )
-}
-
-const features = [
-  {
-    icon: '🤖',
-    title: 'Find latest WhatsApp bots',
-    description:
-      'Browse, preview, and download the freshest WhatsApp bot projects — curated and ranked by the community.',
-  },
-  {
-    icon: '🖥️',
-    title: 'Find latest VPS servers',
-    description:
-      'Guides and links to free/dev-friendly VPS options for deploying your bots (Heroku, Railway, Render, etc.).',
-  },
-  {
-    icon: '📰',
-    title: 'Get news on panel',
-    description:
-      'Stay informed with a dedicated news panel for bot updates, changelogs, and security notices.',
-  },
-  {
-    icon: '🌐',
-    title: 'Create & deploy websites',
-    description:
-      'Launch fast static websites with optimized performance, security, and scalability.',
-  },
-  {
-    icon: '📚',
-    title: 'Learn more about bots',
-    description:
-      'Get deep insights into WhatsApp bot building, scaling, and monetization.',
-  },
-]
+  );
+    }
