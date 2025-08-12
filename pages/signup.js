@@ -43,7 +43,8 @@ export default function SignUp() {
     if (form.password !== form.confirmPassword)
       return toast.error("Passwords do not match.");
     if (!form.country) return toast.error("Please select your country.");
-    if (!form.agree) return toast.error("You must agree to the Terms & Conditions.");
+    if (!form.agree)
+      return toast.error("You must agree to the Terms & Conditions.");
     return true;
   };
 
@@ -55,24 +56,16 @@ export default function SignUp() {
     toast.dismiss();
     toast.loading("Creating your account...", { id: "creating" });
 
-    // ✅ Sign up with all data in metadata (no profiles insert)
-    const { data, error } = await supabase.auth.signUp({
+    // Sign up in Supabase Auth only
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
-      options: {
-        data: {
-          full_name: form.fullName,
-          username: form.username,
-          country: form.country,
-          referral_code: form.referralCode,
-        },
-      },
     });
 
     toast.remove("creating");
 
-    if (error) {
-      toast.error(error.message || "Error signing you up. Please try again.");
+    if (signUpError) {
+      toast.error(signUpError.message || "Error signing you up. Please try again.");
       setLoading(false);
       return;
     }
@@ -81,7 +74,7 @@ export default function SignUp() {
       style: { background: "#00FF9F", color: "#000", fontWeight: "700" },
     });
 
-    setTimeout(() => router.push("/dashboard"), 1400);
+    setTimeout(() => router.push("/dashboard"), 1200);
     setLoading(false);
   };
 
@@ -99,7 +92,6 @@ export default function SignUp() {
             className="rounded-full border-2 border-[#00FF9F] shadow-[0_0_20px_#00FF9F]/30"
           />
         </div>
-
         <h1 className="text-3xl font-bold text-center mb-1">
           <span className="text-[#9D00FF]">Join</span>{" "}
           <span className="text-[#00FF9F]">Codegram</span>
