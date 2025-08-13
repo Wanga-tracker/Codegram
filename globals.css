@@ -1,12 +1,51 @@
-.text-neon {
+/* NEON COLORS */
+
+/* Green Neon */
+.text-neon-green {
   color: #39ff14;
   text-shadow: 0 0 5px #39ff14, 0 0 10px #39ff14, 0 0 20px #39ff14;
 }
-
-.bg-neon {
-  background: #39ff14;
+.bg-neon-green { background-color: #39ff14; }
+.hover\:shadow-neon-green:hover {
+  box-shadow: 0 0 10px #39ff14, 0 0 20px #39ff14, 0 0 40px #39ff14;
 }
 
-.hover\:shadow-neon:hover {
-  box-shadow: 0 0 10px #39ff14, 0 0 20px #39ff14, 0 0 40px #39ff14;
+/* Purple Neon */
+.text-neon-purple {
+  color: #9d00ff;
+  text-shadow: 0 0 5px #9d00ff, 0 0 10px #9d00ff, 0 0 20px #9d00ff;
+}
+.bg-neon-purple { background-color: #9d00ff; }
+.hover\:shadow-neon-purple:hover {
+  box-shadow: 0 0 10px #9d00ff, 0 0 20px #9d00ff, 0 0 40px #9d00ff;
+}
+
+/* Cyan Neon */
+.text-neon-cyan {
+  color: #00ffff;
+  text-shadow: 0 0 5px #00ffff, 0 0 10px #00ffff, 0 0 20px #00ffff;
+}
+.bg-neon-cyan { background-color: #00ffff; }
+.hover\:shadow-neon-cyan:hover {
+  box-shadow: 0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 40px #00ffff;
+}
+
+/* Pink Neon */
+.text-neon-pink {
+  color: #ff00ff;
+  text-shadow: 0 0 5px #ff00ff, 0 0 10px #ff00ff, 0 0 20px #ff00ff;
+}
+.bg-neon-pink { background-color: #ff00ff; }
+.hover\:shadow-neon-pink:hover {
+  box-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+}
+
+/* Yellow Neon */
+.text-neon-yellow {
+  color: #ffff00;
+  text-shadow: 0 0 5px #ffff00, 0 0 10px #ffff00, 0 0 20px #ffff00;
+}
+.bg-neon-yellow { background-color: #ffff00; }
+.hover\:shadow-neon-yellow:hover {
+  box-shadow: 0 0 10px #ffff00, 0 0 20px #ffff00, 0 0 40px #ffff00;
 }
