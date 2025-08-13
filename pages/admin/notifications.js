@@ -1,12 +1,12 @@
-// pages/admin/index.js
+// pages/admin/notifications.js
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import toast, { Toaster } from "react-hot-toast";
 
-export default function AdminPage() {
+export default function AdminNotifications() {
   const [activeSection, setActiveSection] = useState("notifications");
   const [notifications, setNotifications] = useState([]);
-  const [notifForm, setNotifForm] = useState({ title: "", message: "" });
+  const [form, setForm] = useState({ title: "", message: "" });
   const [loading, setLoading] = useState(false);
 
   // Fetch notifications
@@ -17,42 +17,45 @@ export default function AdminPage() {
       .order("created_at", { ascending: false });
 
     if (error) return toast.error(error.message);
-    setNotifications(data);
+    setNotifications(data || []);
   };
 
   useEffect(() => {
-    if (activeSection === "notifications") fetchNotifications();
-  }, [activeSection]);
+    fetchNotifications();
+  }, []);
 
   // Form handlers
-  const handleNotifChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
-    setNotifForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleNotifSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!notifForm.title || !notifForm.message)
+    if (!form.title || !form.message)
       return toast.error("Fill all fields.");
+
     setLoading(true);
+    toast.dismiss();
 
     const { data, error } = await supabase.from("notifications").insert([
       {
-        title: notifForm.title,
-        message: notifForm.message,
+        title: form.title,
+        message: form.message,
         created_at: new Date().toISOString(),
-        posted_by: "admin", // replace with actual admin id if you have auth
+        posted_by: "admin", // optional: replace with actual admin id
       },
     ]);
 
     setLoading(false);
+
     if (error) return toast.error(error.message);
     toast.success("Notification posted!");
-    setNotifForm({ title: "", message: "" });
+
+    setForm({ title: "", message: "" });
     fetchNotifications();
   };
 
-  // Sidebar sections
   const sections = [
     { key: "profile", label: "Profile" },
     { key: "bots", label: "Bots" },
@@ -91,27 +94,27 @@ export default function AdminPage() {
               Manage Notifications
             </h1>
 
-            {/* Add Notification Form */}
-            <form onSubmit={handleNotifSubmit} className="space-y-4 mb-8">
+            {/* Notification Form */}
+            <form onSubmit={handleSubmit} className="space-y-4 mb-8">
               <input
                 type="text"
                 name="title"
                 placeholder="Title"
-                value={notifForm.title}
-                onChange={handleNotifChange}
-                className="w-full p-2 rounded bg-gray-800 border border-gray-700"
+                value={form.title}
+                onChange={handleChange}
+                className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-white"
               />
               <textarea
                 name="message"
                 placeholder="Message"
-                value={notifForm.message}
-                onChange={handleNotifChange}
-                className="w-full p-2 rounded bg-gray-800 border border-gray-700"
+                value={form.message}
+                onChange={handleChange}
+                className="w-full p-2 rounded bg-gray-800 border border-gray-700 text-white"
               />
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-[#00FF9F] text-black px-4 py-2 rounded hover:bg-[#00cc80]"
+                className="bg-[#00FF9F] text-black px-4 py-2 rounded hover:bg-[#00cc80] transition transform hover:scale-105 shadow-[0_0_20px_#00FF9F]"
               >
                 {loading ? "Posting..." : "Post Notification"}
               </button>
@@ -129,13 +132,16 @@ export default function AdminPage() {
                   <small className="text-gray-500">
                     {new Date(notif.created_at).toLocaleString()}
                   </small>
+                  <small className="text-gray-500 block">
+                    Posted by: {notif.posted_by || "unknown"}
+                  </small>
                 </div>
               ))}
             </div>
           </>
         )}
 
-        {/* Placeholder content for other sections */}
+        {/* Placeholder Sections */}
         {activeSection === "profile" && <h1>Profile Section Coming Soon</h1>}
         {activeSection === "bots" && <h1>Bots Section Coming Soon</h1>}
         {activeSection === "news" && <h1>News Section Coming Soon</h1>}
