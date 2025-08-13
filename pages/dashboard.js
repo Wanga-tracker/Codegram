@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import { Bars3Icon } from "@heroicons/react/24/solid";
-import { supabase } from "../../lib/supabaseClient"; // make sure this exists
+import { supabase } from "../lib/supabaseClient"; // make sure this exists
 
 export default function AdminDashboard() {
   const router = useRouter();
