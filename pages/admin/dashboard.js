@@ -1,6 +1,6 @@
 // pages/admin/dashboard.js
 import { useState, useEffect } from "react";
-import { supabase } from "../../lib/supabaseClient.js";
+import { supabase } from "../../lib/supabaseClient";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import toast, { Toaster } from "react-hot-toast";
