@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Image from "next/image";
-import { Bars3Icon, Bell } from "@heroicons/react/24/solid";
+import { Bars3Icon } from "@heroicons/react/24/solid";
+import { BellIcon } from "@heroicons/react/24/outline"; // ✅ Corrected
 import { supabase } from "../lib/supabaseClient";
 
 export default function UserDashboard() {
@@ -47,7 +48,7 @@ export default function UserDashboard() {
 
       setLatest([
         ...(notificationsData || []),
-        ...(newsData || [])
+        ...(newsData || []),
       ]);
     };
 
@@ -127,7 +128,7 @@ export default function UserDashboard() {
             >
               &lt;/&gt;
             </button>
-            <Bell
+            <BellIcon
               className="w-6 h-6 cursor-pointer text-neon-cyan hover:shadow-neon-cyan transition-all"
               onClick={() => router.push("/notifications")}
             />
