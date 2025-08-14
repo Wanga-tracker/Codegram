@@ -2,362 +2,221 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
 import toast, { Toaster } from "react-hot-toast";
-import {
-  PencilSquareIcon,
-  TrashIcon,
-  CloudArrowUpIcon,
-} from "@heroicons/react/24/outline";
 
-export default function AdminBots() {
+export default function BotsAdmin() {
   const [bots, setBots] = useState([]);
+  const [formData, setFormData] = useState({
+    name: "",
+    developer_name: "",
+    description: "",
+    github_url: "",
+    developer_site: "",
+    status: "offline",
+    deployment_hosts: [],
+  });
+  const [imageFile, setImageFile] = useState(null);
+  const [zipFile, setZipFile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState(initialFormState());
-  const [isEditing, setIsEditing] = useState(false);
 
-  const deploymentOptions = [
-    "Heroku",
-    "Render",
-    "Replit",
-    "Railway",
-    "Vercel",
-    "Katabump",
-    "Own Hosting",
-  ];
-
-  function initialFormState() {
-    return {
-      bot_id: null,
-      name: "",
-      developer_name: "",
-      version: "",
-      description: "",
-      github_url: "",
-      developer_site: "",
-      posted_by: "",
-      status: "offline",
-      deployment_hosts: [],
-      imageFile: null,
-      zipFile: null,
-      image_url: "",
-      zip_file_url: "",
-    };
+  // ✅ Fetch bots
+  async function fetchBots() {
+    const { data, error } = await supabase.from("bots").select("*").order("created_at", { ascending: false });
+    if (error) toast.error(error.message);
+    else setBots(data);
   }
 
-  // Fetch bots
   useEffect(() => {
     fetchBots();
   }, []);
 
-  async function fetchBots() {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from("bots")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) toast.error(error.message);
-    else setBots(data);
-    setLoading(false);
+  // ✅ Handle form input
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   }
 
-  function handleCheckboxChange(host) {
-    setFormData((prev) => {
+  // ✅ Handle checkbox
+  function handleDeploymentChange(host) {
+    setFormData(prev => {
       const exists = prev.deployment_hosts.includes(host);
       return {
         ...prev,
         deployment_hosts: exists
-          ? prev.deployment_hosts.filter((h) => h !== host)
+          ? prev.deployment_hosts.filter(h => h !== host)
           : [...prev.deployment_hosts, host],
       };
     });
   }
 
-  async function uploadFile(file, folder) {
-    if (!file) return "";
-    const filePath = `${folder}/${Date.now()}_${file.name}`;
-    const { data, error } = await supabase.storage
-      .from("bots")
-      .upload(filePath, file, { upsert: true });
-    if (error) throw error;
-    const { data: publicUrl } = supabase.storage
-      .from("bots")
-      .getPublicUrl(filePath);
-    return publicUrl.publicUrl;
-  }
-
+  // ✅ Post bot
   async function handleSubmit(e) {
     e.preventDefault();
     setLoading(true);
 
     try {
-      let imageUrl = formData.image_url;
-      let zipUrl = formData.zip_file_url;
-
-      if (formData.imageFile) {
-        imageUrl = await uploadFile(formData.imageFile, "images");
-      }
-      if (formData.zipFile) {
-        zipUrl = await uploadFile(formData.zipFile, "zips");
-      }
-
-      const payload = {
-        name: formData.name,
-        developer_name: formData.developer_name,
-        version: formData.version,
-        description: formData.description,
-        github_url: formData.github_url,
-        developer_site: formData.developer_site,
-        posted_by: formData.posted_by,
-        status: formData.status,
-        deployment_hosts: formData.deployment_hosts,
-        image_url: imageUrl,
-        zip_file_url: zipUrl,
-      };
-
-      if (isEditing) {
-        const { error } = await supabase
-          .from("bots")
-          .update(payload)
-          .eq("bot_id", formData.bot_id);
-        if (error) throw error;
-        toast.success("Bot updated successfully!");
-      } else {
-        const { error } = await supabase.from("bots").insert(payload);
-        if (error) throw error;
-        toast.success("Bot posted successfully!");
+      // Upload image
+      let image_url = null;
+      if (imageFile) {
+        const { data: imgData, error: imgErr } = await supabase.storage
+          .from("bot-files")
+          .upload(`images/${Date.now()}_${imageFile.name}`, imageFile);
+        if (imgErr) throw imgErr;
+        image_url = supabase.storage.from("bot-files").getPublicUrl(imgData.path).data.publicUrl;
       }
 
-      setFormData(initialFormState());
-      setIsEditing(false);
+      // Upload ZIP
+      let zip_file_url = null;
+      if (zipFile) {
+        const { data: zipData, error: zipErr } = await supabase.storage
+          .from("bot-files")
+          .upload(`zips/${Date.now()}_${zipFile.name}`, zipFile);
+        if (zipErr) throw zipErr;
+        zip_file_url = supabase.storage.from("bot-files").getPublicUrl(zipData.path).data.publicUrl;
+      }
+
+      // Insert into DB
+      const { error: insertErr } = await supabase.from("bots").insert([
+        {
+          ...formData,
+          image_url,
+          zip_file_url,
+        },
+      ]);
+
+      if (insertErr) throw insertErr;
+
+      toast.success("Bot posted successfully!");
+      setFormData({
+        name: "",
+        developer_name: "",
+        description: "",
+        github_url: "",
+        developer_site: "",
+        status: "offline",
+        deployment_hosts: [],
+      });
+      setImageFile(null);
+      setZipFile(null);
       fetchBots();
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
-  async function handleEdit(bot) {
-    setFormData({ ...bot, imageFile: null, zipFile: null });
-    setIsEditing(true);
-  }
-
-  async function handleDelete(bot) {
+  // ✅ Delete bot + files
+  async function deleteBot(bot) {
     if (!confirm(`Delete bot "${bot.name}"?`)) return;
-    setLoading(true);
+
     try {
-      // Delete files from storage if exist
+      // Delete image
       if (bot.image_url) {
-        const path = bot.image_url.split("/storage/v1/object/public/bots/")[1];
-        await supabase.storage.from("bots").remove([path]);
+        const imagePath = bot.image_url.split("/storage/v1/object/public/bot-files/")[1];
+        await supabase.storage.from("bot-files").remove([imagePath]);
       }
+      // Delete zip
       if (bot.zip_file_url) {
-        const path = bot.zip_file_url.split("/storage/v1/object/public/bots/")[1];
-        await supabase.storage.from("bots").remove([path]);
+        const zipPath = bot.zip_file_url.split("/storage/v1/object/public/bot-files/")[1];
+        await supabase.storage.from("bot-files").remove([zipPath]);
       }
+
+      // Delete from DB
       const { error } = await supabase.from("bots").delete().eq("bot_id", bot.bot_id);
       if (error) throw error;
-      toast.success("Bot deleted!");
+
+      toast.success("Bot deleted successfully!");
       fetchBots();
     } catch (err) {
       toast.error(err.message);
     }
-    setLoading(false);
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 max-w-4xl mx-auto text-gray-900 dark:text-white">
       <Toaster />
-      <h1 className="text-3xl font-bold mb-6">Admin - Bots</h1>
+      <h1 className="text-3xl font-bold mb-6">🚀 Manage Bots</h1>
 
       {/* Form */}
-      <form
-        onSubmit={handleSubmit}
-        className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded shadow"
-      >
-        <input
-          type="text"
-          placeholder="Bot Name"
-          className="border p-2 rounded"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          required
-        />
-        <input
-          type="text"
-          placeholder="Developer Name"
-          className="border p-2 rounded"
-          value={formData.developer_name}
-          onChange={(e) =>
-            setFormData({ ...formData, developer_name: e.target.value })
-          }
-          required
-        />
-        <input
-          type="text"
-          placeholder="Version"
-          className="border p-2 rounded"
-          value={formData.version}
-          onChange={(e) => setFormData({ ...formData, version: e.target.value })}
-        />
-        <input
-          type="text"
-          placeholder="Posted By"
-          className="border p-2 rounded"
-          value={formData.posted_by}
-          onChange={(e) =>
-            setFormData({ ...formData, posted_by: e.target.value })
-          }
-        />
-        <textarea
-          placeholder="Description"
-          className="border p-2 rounded col-span-full"
-          value={formData.description}
-          onChange={(e) =>
-            setFormData({ ...formData, description: e.target.value })
-          }
-          required
-        />
-        <input
-          type="text"
-          placeholder="GitHub URL"
-          className="border p-2 rounded"
-          value={formData.github_url}
-          onChange={(e) =>
-            setFormData({ ...formData, github_url: e.target.value })
-          }
-        />
-        <input
-          type="text"
-          placeholder="Developer Site"
-          className="border p-2 rounded"
-          value={formData.developer_site}
-          onChange={(e) =>
-            setFormData({ ...formData, developer_site: e.target.value })
-          }
-        />
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-lg space-y-4">
+        <input name="name" value={formData.name} onChange={handleChange} placeholder="Bot Name" className="input" />
+        <input name="developer_name" value={formData.developer_name} onChange={handleChange} placeholder="Developer Name" className="input" />
+        <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Description" className="input" />
+        <input name="github_url" value={formData.github_url} onChange={handleChange} placeholder="GitHub URL" className="input" />
+        <input name="developer_site" value={formData.developer_site} onChange={handleChange} placeholder="Developer Site" className="input" />
 
-        {/* Status dropdown */}
-        <select
-          className="border p-2 rounded"
-          value={formData.status}
-          onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-        >
-          <option value="online">Online</option>
+        {/* Status */}
+        <select name="status" value={formData.status} onChange={handleChange} className="input">
           <option value="offline">Offline</option>
+          <option value="online">Online</option>
+          <option value="maintenance">Maintenance</option>
         </select>
 
-        {/* Deployment hosts */}
-        <div className="col-span-full">
-          <p className="font-medium mb-2">Deployment Hosts:</p>
-          <div className="flex flex-wrap gap-3">
-            {deploymentOptions.map((host) => (
-              <label key={host} className="flex items-center gap-1">
-                <input
-                  type="checkbox"
-                  checked={formData.deployment_hosts.includes(host)}
-                  onChange={() => handleCheckboxChange(host)}
-                />
+        {/* Deployment Hosts */}
+        <fieldset>
+          <legend className="text-sm font-medium">Deployment Hosts</legend>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {["Heroku", "Render", "Replit", "Railway", "Vercel", "Katabump", "Own Hosting"].map(host => (
+              <label key={host} className="flex items-center gap-2">
+                <input type="checkbox" checked={formData.deployment_hosts.includes(host)} onChange={() => handleDeploymentChange(host)} />
                 {host}
               </label>
             ))}
           </div>
-        </div>
+        </fieldset>
 
-        {/* File uploads */}
-        <div>
-          <p className="font-medium mb-1">Image (optional)</p>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) =>
-              setFormData({ ...formData, imageFile: e.target.files[0] })
-            }
-          />
-          {formData.image_url && (
-            <img
-              src={formData.image_url}
-              alt="Bot"
-              className="mt-2 w-24 h-24 object-cover rounded"
-            />
-          )}
-        </div>
-        <div>
-          <p className="font-medium mb-1">ZIP File</p>
-          <input
-            type="file"
-            accept=".zip"
-            onChange={(e) =>
-              setFormData({ ...formData, zipFile: e.target.files[0] })
-            }
-          />
-        </div>
+        {/* Files */}
+        <input type="file" onChange={e => setImageFile(e.target.files[0])} className="input" />
+        <input type="file" onChange={e => setZipFile(e.target.files[0])} className="input" />
 
-        <button
-          type="submit"
-          className="col-span-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded flex items-center gap-2"
-        >
-          <CloudArrowUpIcon className="w-5 h-5" />
-          {isEditing ? "Update Bot" : "Post Bot"}
+        <button type="submit" disabled={loading} className="w-full bg-indigo-600 text-white p-2 rounded-lg hover:bg-indigo-700">
+          {loading ? "Posting..." : "Post Bot"}
         </button>
       </form>
 
-      {/* Bots table */}
-      <div className="mt-8 overflow-x-auto">
-        <table className="min-w-full border">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2 border">Image</th>
-              <th className="p-2 border">Name</th>
-              <th className="p-2 border">Developer</th>
-              <th className="p-2 border">Version</th>
-              <th className="p-2 border">Status</th>
-              <th className="p-2 border">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bots.map((bot) => (
-              <tr key={bot.bot_id}>
-                <td className="p-2 border">
-                  {bot.image_url ? (
-                    <img
-                      src={bot.image_url}
-                      alt={bot.name}
-                      className="w-16 h-16 object-cover rounded"
-                    />
-                  ) : (
-                    "No Image"
-                  )}
-                </td>
-                <td className="p-2 border">{bot.name}</td>
-                <td className="p-2 border">{bot.developer_name}</td>
-                <td className="p-2 border">{bot.version || "-"}</td>
-                <td className="p-2 border">{bot.status}</td>
-                <td className="p-2 border flex gap-2">
-                  <button
-                    onClick={() => handleEdit(bot)}
-                    className="text-blue-600 hover:underline flex items-center gap-1"
-                  >
-                    <PencilSquareIcon className="w-4 h-4" /> Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(bot)}
-                    className="text-red-600 hover:underline flex items-center gap-1"
-                  >
-                    <TrashIcon className="w-4 h-4" /> Delete
-                  </button>
-                </td>
+      {/* Bot List */}
+      <div className="mt-8">
+        {bots.length === 0 ? (
+          <p className="text-center text-gray-500">No bots posted yet.</p>
+        ) : (
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-gray-700">
+                <th>Image</th>
+                <th>Name</th>
+                <th>Developer</th>
+                <th>Status</th>
+                <th>Action</th>
               </tr>
-            ))}
-            {bots.length === 0 && !loading && (
-              <tr>
-                <td colSpan="6" className="text-center p-4">
-                  No bots posted yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {bots.map(bot => (
+                <tr key={bot.bot_id} className="border-b border-gray-800">
+                  <td>{bot.image_url && <img src={bot.image_url} alt={bot.name} className="w-12 h-12 rounded" />}</td>
+                  <td>{bot.name}</td>
+                  <td>{bot.developer_name}</td>
+                  <td>{bot.status}</td>
+                  <td>
+                    <button onClick={() => deleteBot(bot)} className="text-red-500 hover:underline">Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
+
+      <style jsx>{`
+        .input {
+          display: block;
+          width: 100%;
+          padding: 0.5rem;
+          border-radius: 0.375rem;
+          border: 1px solid #ccc;
+          background-color: inherit;
+          color: inherit;
+        }
+      `}</style>
     </div>
   );
-  }
+    }
