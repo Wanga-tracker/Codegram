@@ -1,6 +1,7 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "../../lib/supabaseClient";
+import { motion } from "framer-motion";
 
 export default function AdminBots() {
   const [formData, setFormData] = useState({
@@ -29,17 +30,12 @@ export default function AdminBots() {
     "Own Hosting",
   ];
 
-  // Upload helper
   const uploadFile = async (file, bucket) => {
     const fd = new FormData();
     fd.append("file", file);
     fd.append("bucket", bucket);
 
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      body: fd,
-    });
-
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
     if (!res.ok) throw new Error("Upload failed");
     const data = await res.json();
     return data.url;
@@ -125,100 +121,100 @@ export default function AdminBots() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white shadow-md rounded-xl">
-      <h1 className="text-2xl font-bold mb-6">Post New Bot</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Bot Name */}
+    <motion.div
+      className="max-w-4xl mx-auto p-6 bg-gray-900 text-gray-100 rounded-2xl shadow-lg border border-gray-800"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <h1 className="text-3xl font-bold mb-6 text-blue-400">🚀 Post New Bot</h1>
+
+      <form onSubmit={handleSubmit} className="space-y-5">
         <input
           type="text"
           name="botName"
           value={formData.botName}
           onChange={handleChange}
           placeholder="Bot Name"
-          className="w-full border rounded p-2"
+          className="w-full rounded-lg border-gray-700 bg-gray-800 p-3 focus:border-blue-500 focus:ring-blue-500"
           required
         />
 
-        {/* Developer Name */}
         <input
           type="text"
           name="developerName"
           value={formData.developerName}
           onChange={handleChange}
           placeholder="Developer Name"
-          className="w-full border rounded p-2"
+          className="w-full rounded-lg border-gray-700 bg-gray-800 p-3 focus:border-blue-500 focus:ring-blue-500"
           required
         />
 
-        {/* Bot Version */}
         <input
           type="text"
           name="botVersion"
           value={formData.botVersion}
           onChange={handleChange}
           placeholder="Bot Version"
-          className="w-full border rounded p-2"
+          className="w-full rounded-lg border-gray-700 bg-gray-800 p-3"
         />
 
-        {/* Description */}
         <textarea
           name="description"
           value={formData.description}
           onChange={handleChange}
           placeholder="Bot Description"
-          className="w-full border rounded p-2"
+          className="w-full rounded-lg border-gray-700 bg-gray-800 p-3"
           rows="3"
           required
         />
 
-        {/* GitHub URL */}
         <input
           type="url"
           name="githubUrl"
           value={formData.githubUrl}
           onChange={handleChange}
           placeholder="GitHub URL (optional)"
-          className="w-full border rounded p-2"
+          className="w-full rounded-lg border-gray-700 bg-gray-800 p-3"
         />
 
-        {/* Developer Site */}
         <input
           type="url"
           name="developerSite"
           value={formData.developerSite}
           onChange={handleChange}
           placeholder="Developer Site (optional)"
-          className="w-full border rounded p-2"
+          className="w-full rounded-lg border-gray-700 bg-gray-800 p-3"
         />
 
-        {/* Posted By */}
         <input
           type="text"
           name="postedBy"
           value={formData.postedBy}
           onChange={handleChange}
           placeholder="Posted By"
-          className="w-full border rounded p-2"
+          className="w-full rounded-lg border-gray-700 bg-gray-800 p-3"
           required
         />
 
-        {/* Status */}
         <select
           name="status"
           value={formData.status}
           onChange={handleChange}
-          className="w-full border rounded p-2"
+          className="w-full rounded-lg border-gray-700 bg-gray-800 p-3"
         >
           <option value="online">Online</option>
           <option value="offline">Offline</option>
         </select>
 
-        {/* Hosting Checkboxes */}
         <div>
           <label className="block font-medium mb-2">Hostings</label>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-3">
             {hostingOptions.map((option) => (
-              <label key={option} className="flex items-center space-x-2">
+              <label
+                key={option}
+                className="flex items-center space-x-2 bg-gray-800 p-2 rounded-lg"
+              >
                 <input
                   type="checkbox"
                   checked={formData.hostings.includes(option)}
@@ -230,34 +226,35 @@ export default function AdminBots() {
           </div>
         </div>
 
-        {/* Image Upload */}
         <div>
           <label className="block font-medium mb-2">Bot Image</label>
           <input
             type="file"
             accept="image/*"
             onChange={(e) => setImageFile(e.target.files[0])}
+            className="w-full rounded-lg border-gray-700 bg-gray-800 p-3"
           />
         </div>
 
-        {/* Zip Upload */}
         <div>
           <label className="block font-medium mb-2">Bot Zip File</label>
           <input
             type="file"
             accept=".zip"
             onChange={(e) => setZipFile(e.target.files[0])}
+            className="w-full rounded-lg border-gray-700 bg-gray-800 p-3"
           />
         </div>
 
-        <button
+        <motion.button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg disabled:opacity-50"
+          whileTap={{ scale: 0.95 }}
         >
           {loading ? "Posting..." : "Post Bot"}
-        </button>
+        </motion.button>
       </form>
-    </div>
+    </motion.div>
   );
-    }
+  }
