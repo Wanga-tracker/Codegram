@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import BotForm from "@/components/admin/BotForm";
-import BotList from "@/components/admin/BotList";
-import { getAllBots } from "@/lib/supabaseBots";
+import BotForm from "./components/admin/BotForm";
+import BotList from "./components/admin/BotList";
+import { getAllBots } from "./lib/supabaseBots";
 
 export default function BotsAdmin() {
   const [bots, setBots] = useState([]);
