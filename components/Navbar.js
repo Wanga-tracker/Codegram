@@ -1,55 +1,104 @@
 import Link from "next/link";
-import { Menu } from "lucide-react";
+import Image from "next/image";
+import { Menu, X, Code2 } from "lucide-react";
 import { useState } from "react";
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
-    <nav className="bg-gray-900 text-white shadow-lg">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl font-bold text-blue-400">Codegram</span>
-          </Link>
+    <>
+      <nav className="nav-glass sticky top-0 z-50 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center">
+          {/* Left: Hamburger (mobile) */}
+          <button
+            aria-label="Open menu"
+            onClick={() => setOpen(true)}
+            className="md:hidden mr-2 p-2 rounded-lg hover:bg-white/10 transition"
+          >
+            <Menu size={22} />
+          </button>
 
-          {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-6">
-            <Link href="/" className="hover:text-blue-400 transition">Home</Link>
-            <Link href="/login" className="hover:text-blue-400 transition">Login</Link>
-            <Link href="/signup" className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg transition">
-              Sign Up
+          {/* Center: Brand */}
+          <div className="flex-1 flex justify-center md:justify-start">
+            <Link href="/" className="group flex items-center gap-3">
+              <Image
+                src="/IMG-20250812-WA0043.jpg"
+                alt="Codegram Logo"
+                width={36}
+                height={36}
+                className="rounded-full border-2 border-neon-purple drop-shadow-glow"
+                priority
+              />
+              <span className="hidden md:inline text-xl font-extrabold tracking-wide text-neon-purple">
+                CODEGRAM
+              </span>
+              <span className="sr-only">Codegram</span>
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-800 transition"
-          >
-            <Menu size={24} />
-          </button>
+          {/* Right: Desktop nav */}
+          <div className="hidden md:flex items-center gap-6">
+            <Link href="/" className="hover:text-neon-cyan transition relative after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-neon-cyan after:transition-all">
+              Home
+            </Link>
+            <Link href="/login" className="hover:text-neon-cyan transition relative after:absolute after:-bottom-1 after:left-0 after:h-[2px] after:w-0 hover:after:w-full after:bg-neon-cyan after:transition-all">
+              Login
+            </Link>
+            <Link href="/signup" className="btn-neon">Sign Up</Link>
+            <Link href="/admin/code" className="btn-ghost gap-2">
+              <Code2 size={18} /> {"</>"}
+            </Link>
+          </div>
         </div>
-      </div>
+      </nav>
 
-      {/* Mobile Menu */}
-      {isOpen && (
-        <div className="md:hidden bg-gray-800 px-4 pb-4 space-y-2">
-          <Link href="/" className="block hover:text-blue-400">Home</Link>
-          <Link href="/login" className="block hover:text-blue-400">Login</Link>
-          <Link href="/signup" className="block bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-lg transition">
-            Sign Up
-          </Link>
-        </div>
-      )}
-    </nav>
-      
-    <img 
-  src="/IMG-20250812-WA0043.jpg" 
-  alt="Codegram Logo" 
-  className="h-10 w-10 object-cover rounded-full border-2 border-[#00FF9F]"
-/>
+      {/* Mobile Drawer */}
+      <div
+        className={`fixed inset-0 z-50 ${open ? "pointer-events-auto" : "pointer-events-none"}`}
+        aria-hidden={!open}
+      >
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/60 transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setOpen(false)}
+        />
+        {/* Panel */}
+        <aside
+          className={`absolute left-0 top-0 h-full w-80 max-w-[85%] bg-[#0b0b0f]/95 border-r border-white/10 p-4 animate-slide-in ${open ? "translate-x-0" : "-translate-x-full"} transition-transform`}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Image
+                src="/IMG-20250812-WA0043.jpg"
+                alt="Codegram Logo"
+                width={32}
+                height={32}
+                className="rounded-full border-2 border-neon-purple"
+              />
+              <span className="text-lg font-bold text-neon-purple">CODEGRAM</span>
+            </div>
+            <button aria-label="Close menu" onClick={() => setOpen(false)} className="p-2 rounded hover:bg-white/10">
+              <X size={20} />
+            </button>
+          </div>
+
+          <nav className="flex flex-col gap-2">
+            <Link href="/" onClick={() => setOpen(false)} className="btn-ghost">Home</Link>
+            <Link href="/login" onClick={() => setOpen(false)} className="btn-ghost">Login</Link>
+            <Link href="/signup" onClick={() => setOpen(false)} className="btn-neon">Sign Up</Link>
+            <Link href="/admin/code" onClick={() => setOpen(false)} className="btn-ghost gap-2">
+              <Code2 size={18} /> {"</> Code"}
+            </Link>
+          </nav>
+
+          <div className="mt-6 p-3 rounded-xl border border-white/10 bg-white/[0.03]">
+            <p className="text-sm text-gray-300">
+              Built by <span className="text-neon-green font-semibold">Tracker Wanga</span>.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </>
   );
-}
+    }
