@@ -1,14 +1,9 @@
-// pages/admin/bots.js
 import { useState } from "react";
-import { useRouter } from "next/router";
-import toast, { Toaster } from "react-hot-toast";
 import { supabase } from "../../lib/supabaseClient";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function AdminBots() {
-  const router = useRouter();
   const [form, setForm] = useState({
-    botImage: null,
-    zipFile: null,
     name: "",
     developer_name: "",
     version: "",
@@ -19,9 +14,107 @@ export default function AdminBots() {
     status: "offline",
     deployment_hosts: [],
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [zipFile, setZipFile] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const hostOptions = [
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+
+    // Handle deployment host checkboxes
+    if (type === "checkbox" && name === "deployment_hosts") {
+      setForm((prev) => ({
+        ...prev,
+        deployment_hosts: checked
+          ? [...prev.deployment_hosts, value]
+          : prev.deployment_hosts.filter((host) => host !== value),
+      }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      let imageUrl = null;
+      let zipUrl = null;
+
+      // Upload image if provided
+      if (imageFile) {
+        const { data, error } = await supabase.storage
+          .from("bots")
+          .upload(`images/${Date.now()}_${imageFile.name}`, imageFile);
+        if (error) throw error;
+
+        const { data: publicUrlData } = supabase.storage
+          .from("bots")
+          .getPublicUrl(data.path);
+        imageUrl = publicUrlData.publicUrl;
+      }
+
+      // Upload zip if provided
+      if (zipFile) {
+        const { data, error } = await supabase.storage
+          .from("bots")
+          .upload(`zips/${Date.now()}_${zipFile.name}`, zipFile);
+        if (error) throw error;
+
+        const { data: publicUrlData } = supabase.storage
+          .from("bots")
+          .getPublicUrl(data.path);
+        zipUrl = publicUrlData.publicUrl;
+      }
+
+      // Insert bot data into DB
+      const { error: insertError } = await supabase.from("bots").insert([
+        {
+          name: form.name,
+          developer_name: form.developer_name,
+          version: form.version || null,
+          description: form.description,
+          image_url: imageUrl,
+          zip_file_url: zipUrl,
+          github_url: form.github_url || null,
+          developer_site: form.developer_site || null,
+          posted_by: form.posted_by,
+          status: form.status,
+          deployment_hosts: form.deployment_hosts || [],
+        },
+      ]);
+
+      if (insertError) {
+        console.error("Supabase insert error:", insertError);
+        toast.error(insertError.message);
+        setLoading(false);
+        return;
+      }
+
+      toast.success("Bot posted successfully!");
+      setForm({
+        name: "",
+        developer_name: "",
+        version: "",
+        description: "",
+        github_url: "",
+        developer_site: "",
+        posted_by: "",
+        status: "offline",
+        deployment_hosts: [],
+      });
+      setImageFile(null);
+      setZipFile(null);
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error(err.message || "Unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const hostingOptions = [
     "Heroku",
     "Render",
     "Replit",
@@ -31,145 +124,60 @@ export default function AdminBots() {
     "Own hosting",
   ];
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileChange = (e) => {
-    const { name, files } = e.target;
-    setForm((prev) => ({ ...prev, [name]: files[0] }));
-  };
-
-  const handleCheckboxChange = (host) => {
-    setForm((prev) => {
-      const isSelected = prev.deployment_hosts.includes(host);
-      return {
-        ...prev,
-        deployment_hosts: isSelected
-          ? prev.deployment_hosts.filter((h) => h !== host)
-          : [...prev.deployment_hosts, host],
-      };
-    });
-  };
-
-  const uploadFile = async (file, pathPrefix) => {
-    if (!file) return null;
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const filePath = `${pathPrefix}/${fileName}`;
-
-    const { error } = await supabase.storage
-      .from("bots")
-      .upload(filePath, file, { upsert: false });
-
-    if (error) {
-      throw error;
-    }
-    const { data: publicUrl } = supabase.storage
-      .from("bots")
-      .getPublicUrl(filePath);
-
-    return publicUrl.publicUrl;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const imageUrl = await uploadFile(form.botImage, "images");
-      const zipUrl = await uploadFile(form.zipFile, "zips");
-
-      const { error } = await supabase.from("bots").insert([
-        {
-          name: form.name,
-          developer_name: form.developer_name,
-          version: form.version,
-          description: form.description,
-          image_url: imageUrl,
-          zip_file_url: zipUrl,
-          github_url: form.github_url || null,
-          developer_site: form.developer_site || null,
-          posted_by: form.posted_by,
-          status: form.status,
-          deployment_hosts: form.deployment_hosts,
-        },
-      ]);
-
-      if (error) throw error;
-      toast.success("Bot posted successfully!");
-      setTimeout(() => {
-        router.push("/admin/bots");
-      }, 1500);
-    } catch (err) {
-      console.error(err);
-      toast.error("Error posting bot");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-black text-white p-6">
-      <Toaster />
-      <h1 className="text-3xl font-bold text-neon mb-4">Post New Bot</h1>
-
+      <Toaster position="top-right" />
+      <h1 className="text-3xl font-bold mb-6 text-neon">Post New Bot</h1>
       <form
         onSubmit={handleSubmit}
-        className="max-w-2xl space-y-4 bg-gray-900 p-6 rounded-lg shadow-lg"
+        className="bg-gray-900 p-6 rounded-lg shadow-lg space-y-4 max-w-3xl mx-auto"
       >
-        <input
-          type="file"
-          name="botImage"
-          onChange={handleFileChange}
-          accept="image/*"
-          className="block w-full text-sm text-gray-300"
-        />
-
         <input
           type="text"
           name="name"
           placeholder="Bot Name"
           value={form.name}
           onChange={handleChange}
-          className="w-full p-2 rounded bg-gray-800"
           required
+          className="w-full p-3 rounded bg-gray-800"
         />
-
         <input
           type="text"
           name="developer_name"
           placeholder="Developer Name"
           value={form.developer_name}
           onChange={handleChange}
-          className="w-full p-2 rounded bg-gray-800"
           required
+          className="w-full p-3 rounded bg-gray-800"
         />
-
         <input
           type="text"
           name="version"
-          placeholder="Bot Version"
+          placeholder="Version"
           value={form.version}
           onChange={handleChange}
-          className="w-full p-2 rounded bg-gray-800"
+          className="w-full p-3 rounded bg-gray-800"
         />
-
         <textarea
           name="description"
-          placeholder="Bot Description"
+          placeholder="Description"
           value={form.description}
           onChange={handleChange}
-          className="w-full p-2 rounded bg-gray-800"
           required
+          className="w-full p-3 rounded bg-gray-800"
         ></textarea>
 
         <input
           type="file"
-          name="zipFile"
-          onChange={handleFileChange}
+          onChange={(e) => setImageFile(e.target.files[0])}
+          accept="image/*"
+          className="w-full p-3 rounded bg-gray-800"
+        />
+        <input
+          type="file"
+          onChange={(e) => setZipFile(e.target.files[0])}
           accept=".zip"
-          className="block w-full text-sm text-gray-300"
+          className="w-full p-3 rounded bg-gray-800"
         />
 
         <input
@@ -178,48 +186,48 @@ export default function AdminBots() {
           placeholder="GitHub URL"
           value={form.github_url}
           onChange={handleChange}
-          className="w-full p-2 rounded bg-gray-800"
+          className="w-full p-3 rounded bg-gray-800"
         />
-
         <input
           type="url"
           name="developer_site"
           placeholder="Developer Site"
           value={form.developer_site}
           onChange={handleChange}
-          className="w-full p-2 rounded bg-gray-800"
+          className="w-full p-3 rounded bg-gray-800"
         />
-
         <input
           type="text"
           name="posted_by"
           placeholder="Posted By"
           value={form.posted_by}
           onChange={handleChange}
-          className="w-full p-2 rounded bg-gray-800"
-          required
+          className="w-full p-3 rounded bg-gray-800"
         />
 
         <select
           name="status"
           value={form.status}
           onChange={handleChange}
-          className="w-full p-2 rounded bg-gray-800"
+          className="w-full p-3 rounded bg-gray-800"
         >
           <option value="online">Online</option>
           <option value="offline">Offline</option>
         </select>
 
-        <div>
-          <p className="mb-2">Deployment Hosts:</p>
-          {hostOptions.map((host) => (
+        <div className="space-y-2">
+          <p className="text-lg font-bold">Deployment Hosts:</p>
+          {hostingOptions.map((host) => (
             <label key={host} className="block">
               <input
                 type="checkbox"
+                name="deployment_hosts"
+                value={host}
                 checked={form.deployment_hosts.includes(host)}
-                onChange={() => handleCheckboxChange(host)}
+                onChange={handleChange}
+                className="mr-2"
               />
-              <span className="ml-2">{host}</span>
+              {host}
             </label>
           ))}
         </div>
@@ -227,11 +235,11 @@ export default function AdminBots() {
         <button
           type="submit"
           disabled={loading}
-          className="bg-neon px-4 py-2 rounded hover:shadow-neon transition"
+          className="w-full p-3 bg-neon text-black font-bold rounded hover:shadow-neon transition"
         >
           {loading ? "Posting..." : "Post Bot"}
         </button>
       </form>
     </div>
   );
-    }
+}
