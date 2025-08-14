@@ -1,4 +1,4 @@
-import { deleteBot } from "@/lib/supabaseBots";
+import { deleteBot } from "./lib/supabaseBots";
 import toast from "react-hot-toast";
 
 export default function BotItem({ bot, onRefresh }) {
