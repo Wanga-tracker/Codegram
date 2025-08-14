@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { botSchema } from "@/lib/schemas";
-import { createBot } from "@/lib/supabaseBots";
+import { botSchema } from "./lib/schemas";
+import { createBot } from "./lib/supabaseBots";
 import toast from "react-hot-toast";
 
 export default function BotForm({ onSuccess }) {
