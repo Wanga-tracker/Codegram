@@ -1,545 +1,191 @@
 // pages/admin/bots.js
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import toast, { Toaster } from "react-hot-toast";
+import { useRouter } from "next/router";
 
 export default function AdminBots() {
-  const [form, setForm] = useState({
-    // BOT FIELDS (must exist in bots table)
-    name: "",
-    developer_name: "",
-    version: "",
-    description: "",
-    github_url: "",
-    zip_file_url: "", // direct link only
-    developer_site: "",
-    posted_by: "",
-    status: "offline",
-    deployment_hosts: [],
-    image_url: "",
-
-    // DEVELOPER PROFILE (stored in developers table)
-    developer_description: "",
-    github_link: "",
-    whatsapp_channel: "",
-    whatsapp_group: "",
-    whatsapp_number: "",
-  });
-
-  const [imageFile, setImageFile] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const [user, setUser] = useState(null);
+  const [formData, setFormData] = useState(initialForm());
   const [bots, setBots] = useState([]);
-  const [editingBot, setEditingBot] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
-  const hostingOptions = [
-    "Heroku",
-    "Render",
-    "Replit",
-    "Railway",
-    "Vercel",
-    "Katabump",
-    "Own hosting",
-  ];
+  function initialForm() {
+    return {
+      name: "",
+      developer_name: "",
+      description: "",
+      deployment_hosts: "",
+      github_url: "",
+      developer_site: "",
+      status: "online",
+      zip_file: null,
+      image_file: null,
+    };
+  }
 
-  // --- Load bots ---
   useEffect(() => {
-    fetchBots();
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data?.user) {
+        router.push("/login");
+      } else {
+        setUser(data.user);
+        fetchBots();
+      }
+    });
   }, []);
 
-  const fetchBots = async () => {
+  async function fetchBots() {
     const { data, error } = await supabase
       .from("bots")
       .select("*")
       .order("created_at", { ascending: false });
 
+    if (!error) setBots(data);
+  }
+
+  function handleChange(e) {
+    const { name, value, files } = e.target;
+    if (files) {
+      setFormData((prev) => ({ ...prev, [name]: files[0] }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  }
+
+  async function uploadFile(file, folder) {
+    if (!file) return null;
+    const fileName = `${Date.now()}-${file.name}`;
+    const { error } = await supabase.storage
+      .from("bot_files")
+      .upload(`${folder}/${fileName}`, file, { upsert: false });
+
     if (error) {
-      console.error(error);
-      toast.error("Failed to load bots");
+      console.error("Upload error:", error.message);
+      return null;
+    }
+    const { data: urlData } = supabase.storage
+      .from("bot_files")
+      .getPublicUrl(`${folder}/${fileName}`);
+    return urlData.publicUrl;
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!formData.name || !formData.developer_name || !formData.description) {
+      alert("Please fill all required fields");
       return;
     }
-    setBots(data || []);
-  };
-
-  // --- Form change ---
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (type === "checkbox" && name === "deployment_hosts") {
-      setForm((prev) => ({
-        ...prev,
-        deployment_hosts: checked
-          ? [...prev.deployment_hosts, value]
-          : prev.deployment_hosts.filter((h) => h !== value),
-      }));
-    } else {
-      setForm((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
-  // --- Upload image to Supabase Storage (bucket: bots) ---
-  const uploadImage = async (file) => {
-    if (!file) return null;
-    const filePath = `images/${Date.now()}_${file.name}`;
-    const { error } = await supabase.storage.from("bots").upload(filePath, file);
-    if (error) throw error;
-    const { data: publicData } = supabase.storage.from("bots").getPublicUrl(filePath);
-    return publicData.publicUrl;
-  };
-
-  // --- Submit: save bot, then upsert developer profile ---
-  const handleSubmit = async (e) => {
-    e.preventDefault();
     setLoading(true);
 
-    try {
-      // 1) Image upload if provided
-      let imageUrl = form.image_url || null;
-      if (imageFile) {
-        toast.loading("Uploading image…");
-        imageUrl = await uploadImage(imageFile);
-        toast.dismiss();
-      }
+    const zip_file_url = await uploadFile(formData.zip_file, "zips");
+    const image_url = await uploadFile(formData.image_file, "images");
 
-      // 2) BOT payload (only columns that exist in bots table)
-      const botPayload = {
-        name: form.name,
-        developer_name: form.developer_name,
-        version: form.version,
-        description: form.description,
-        github_url: form.github_url,
-        zip_file_url: form.zip_file_url,
-        developer_site: form.developer_site,
-        posted_by: form.posted_by,
-        status: form.status,
-        deployment_hosts: form.deployment_hosts,
-        image_url: imageUrl,
-      };
-
-      // 3) Insert/update bot
-      if (editingBot) {
-        const { error } = await supabase
-          .from("bots")
-          .update(botPayload)
-          .eq("bot_id", editingBot.bot_id);
-        if (error) throw error;
-        toast.success("Bot updated");
-      } else {
-        const { error } = await supabase.from("bots").insert([botPayload]);
-        if (error) throw error;
-        toast.success("Bot posted");
-      }
-
-      // 4) Upsert developer profile (optional)
-      const anyDevFieldFilled =
-        form.developer_name ||
-        form.developer_description ||
-        form.github_link ||
-        form.developer_site ||
-        form.whatsapp_channel ||
-        form.whatsapp_group ||
-        form.whatsapp_number;
-
-      if (anyDevFieldFilled) {
-        try {
-          // Requires a developers table with UNIQUE(bot_name)
-          const devPayload = {
-            bot_name: form.name, // link by bot name
-            developer_name: form.developer_name || null,
-            developer_description: form.developer_description || null,
-            github_link: form.github_link || null,
-            developer_site: form.developer_site || null,
-            whatsapp_channel: form.whatsapp_channel || null,
-            whatsapp_group: form.whatsapp_group || null,
-            whatsapp_number: form.whatsapp_number || null,
-          };
-
-          const { error: devErr } = await supabase
-            .from("developers")
-            .upsert(devPayload, { onConflict: "bot_name" });
-          if (devErr) throw devErr;
-        } catch (devTableErr) {
-          console.warn(devTableErr);
-          toast(
-            "Bot saved, but developer profile table is missing. Create `developers` to store it.",
-            { icon: "⚠️" }
-          );
-        }
-      }
-
-      // 5) Reset
-      resetForm();
-      fetchBots();
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message || "Save failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetForm = () => {
-    setForm({
-      name: "",
-      developer_name: "",
-      version: "",
-      description: "",
-      github_url: "",
-      zip_file_url: "",
-      developer_site: "",
-      posted_by: "",
-      status: "offline",
-      deployment_hosts: [],
-      image_url: "",
-
-      developer_description: "",
-      github_link: "",
-      whatsapp_channel: "",
-      whatsapp_group: "",
-      whatsapp_number: "",
-    });
-    setImageFile(null);
-    setEditingBot(null);
-  };
-
-  const deleteBot = async (bot) => {
-    if (!confirm(`Delete bot "${bot.name}"?`)) return;
-    try {
-      // try removing image if it looks like a Supabase public URL
-      if (bot.image_url?.includes("/storage/v1/object/public/bots/")) {
-        const imagePath = bot.image_url.split("/storage/v1/object/public/bots/")[1];
-        if (imagePath) {
-          await supabase.storage.from("bots").remove([imagePath]);
-        }
-      }
-      const { error } = await supabase.from("bots").delete().eq("bot_id", bot.bot_id);
-      if (error) throw error;
-      toast.success("Bot deleted");
-      fetchBots();
-    } catch (err) {
-      console.error(err);
-      toast.error(err.message || "Delete failed");
-    }
-  };
-
-  const editBot = async (bot) => {
-    // base form from bot
-    const base = {
-      name: bot.name || "",
-      developer_name: bot.developer_name || "",
-      version: bot.version || "",
-      description: bot.description || "",
-      github_url: bot.github_url || "",
-      zip_file_url: bot.zip_file_url || "",
-      developer_site: bot.developer_site || "",
-      posted_by: bot.posted_by || "",
-      status: bot.status || "offline",
-      deployment_hosts: bot.deployment_hosts || [],
-      image_url: bot.image_url || "",
-
-      // default empty dev profile until fetched
-      developer_description: "",
-      github_link: "",
-      whatsapp_channel: "",
-      whatsapp_group: "",
-      whatsapp_number: "",
+    const botPayload = {
+      name: formData.name,
+      developer_name: formData.developer_name,
+      description: formData.description,
+      deployment_hosts: formData.deployment_hosts,
+      github_url: formData.github_url,
+      developer_site: formData.developer_site,
+      status: formData.status,
+      created_by: user?.id,
+      posted_by: user?.id,
     };
 
-    setForm(base);
-    setEditingBot(bot);
-    setImageFile(null);
+    if (zip_file_url) botPayload.zip_file_url = zip_file_url;
+    if (image_url) botPayload.image_url = image_url;
 
-    // fetch developer profile if table exists
-    try {
-      const { data: devRow, error: devErr } = await supabase
-        .from("developers")
-        .select("*")
-        .eq("bot_name", bot.name)
-        .maybeSingle();
-
-      if (!devErr && devRow) {
-        setForm((prev) => ({
-          ...prev,
-          developer_description: devRow.developer_description || "",
-          github_link: devRow.github_link || "",
-          // prefer developer_site in developer profile if present
-          developer_site: devRow.developer_site || prev.developer_site,
-          whatsapp_channel: devRow.whatsapp_channel || "",
-          whatsapp_group: devRow.whatsapp_group || "",
-          whatsapp_number: devRow.whatsapp_number || "",
-        }));
-      }
-    } catch (e) {
-      // developers table might not exist yet — ignore
+    let error;
+    if (editingId) {
+      ({ error } = await supabase.from("bots").update(botPayload).eq("bot_id", editingId));
+      setEditingId(null);
+    } else {
+      ({ error } = await supabase.from("bots").insert(botPayload));
     }
-  };
+
+    setLoading(false);
+    if (error) {
+      console.error("Save error:", error.message);
+      alert("Error saving bot");
+    } else {
+      alert(editingId ? "Bot updated!" : "Bot added!");
+      setFormData(initialForm());
+      fetchBots();
+    }
+  }
+
+  async function handleEdit(bot) {
+    setFormData({
+      ...bot,
+      zip_file: null,
+      image_file: null,
+    });
+    setEditingId(bot.bot_id);
+  }
+
+  async function handleDelete(bot_id) {
+    if (!confirm("Are you sure you want to delete this bot?")) return;
+    const { error } = await supabase.from("bots").delete().eq("bot_id", bot_id);
+    if (!error) {
+      fetchBots();
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-950 via-black to-gray-900 text-white p-6">
-      <Toaster position="top-right" />
-      <h1 className="text-4xl font-extrabold mb-8 text-center">
-        <span className="bg-gradient-to-r from-green-400 via-blue-400 to-green-400 bg-clip-text text-transparent drop-shadow">
-          {editingBot ? "Edit Bot" : "Post New Bot"}
-        </span>
+    <div className="min-h-screen bg-black text-white p-6">
+      <h1 className="text-3xl font-bold text-green-400 mb-6">
+        {editingId ? "✏️ Edit Bot" : "🚀 Add New Bot"}
       </h1>
 
+      {/* Bot Form */}
       <form
         onSubmit={handleSubmit}
-        className="bg-gray-900/60 border border-green-500/20 rounded-2xl shadow-xl max-w-5xl mx-auto p-6 space-y-8"
+        className="max-w-2xl space-y-4 bg-gray-900 p-6 rounded-2xl border border-green-500 shadow-[0_0_15px_#00ff7f]"
       >
-        {/* BOT INFO */}
-        <section>
-          <h2 className="text-xl font-bold text-green-400 mb-4">BOT INFO</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              name="name"
-              placeholder="Bot Name"
-              value={form.name}
-              onChange={handleChange}
-              required
-              className="w-full p-3 rounded-lg bg-gray-800 border border-green-500/20 focus:border-green-400 outline-none"
-            />
-            <input
-              type="text"
-              name="developer_name"
-              placeholder="Developer Name"
-              value={form.developer_name}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-green-500/20 focus:border-green-400 outline-none"
-            />
-            <input
-              type="text"
-              name="version"
-              placeholder="Version"
-              value={form.version}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-green-500/20 focus:border-green-400 outline-none"
-            />
-            <select
-              name="status"
-              value={form.status}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-green-500/20 focus:border-green-400 outline-none"
-            >
-              <option value="online">Online</option>
-              <option value="offline">Offline</option>
-            </select>
-            <input
-              type="text"
-              name="posted_by"
-              placeholder="Posted By"
-              value={form.posted_by}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-green-500/20 focus:border-green-400 outline-none md:col-span-2"
-            />
-          </div>
-
-          <textarea
-            name="description"
-            placeholder="Short description"
-            value={form.description}
-            onChange={handleChange}
-            rows={4}
-            className="mt-4 w-full p-3 rounded-lg bg-gray-800 border border-green-500/20 focus:border-green-400 outline-none"
-          />
-
-          <div className="mt-4 grid md:grid-cols-2 gap-4">
-            <input
-              type="url"
-              name="github_url"
-              placeholder="GitHub URL"
-              value={form.github_url}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-green-500/20 focus:border-green-400 outline-none"
-            />
-            <input
-              type="url"
-              name="developer_site"
-              placeholder="Developer Website"
-              value={form.developer_site}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-green-500/20 focus:border-green-400 outline-none"
-            />
-            <input
-              type="url"
-              name="zip_file_url"
-              placeholder="Direct ZIP Download Link"
-              value={form.zip_file_url}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-green-500/20 focus:border-green-400 outline-none md:col-span-2"
-            />
-            <div className="md:col-span-2">
-              <label className="block text-sm text-green-300 mb-2">
-                Bot Cover Image (optional)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                className="w-full p-3 rounded-lg bg-gray-800 border border-green-500/20 focus:border-green-400 outline-none"
-              />
-              {form.image_url && (
-                <p className="text-xs text-green-300 mt-2">
-                  Current image: {form.image_url}
-                </p>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* DEPLOYMENT HOSTS */}
-        <section>
-          <h2 className="text-xl font-bold text-yellow-400 mb-3">
-            DEPLOYMENT HOSTS
-          </h2>
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {hostingOptions.map((host) => (
-              <label
-                key={host}
-                className="flex items-center gap-2 bg-gray-800/60 border border-yellow-500/20 rounded-lg px-3 py-2 hover:border-yellow-400 transition"
-              >
-                <input
-                  type="checkbox"
-                  name="deployment_hosts"
-                  value={host}
-                  checked={form.deployment_hosts.includes(host)}
-                  onChange={handleChange}
-                  className="accent-yellow-400"
-                />
-                <span className="text-sm">{host}</span>
-              </label>
-            ))}
-          </div>
-        </section>
-
-        {/* DEVELOPER INFO (scrollable) */}
-        <section className="border-t border-green-500/20 pt-4">
-          <h2 className="text-xl font-bold text-blue-400 mb-3">DEVELOPER INFO</h2>
-          <p className="text-xs text-blue-200/80 mb-3">
-            Saved in <code>developers</code> table (linked by <b>bot_name</b>). Optional.
-          </p>
-          <div className="max-h-64 overflow-y-auto pr-1 space-y-3">
-            <textarea
-              name="developer_description"
-              placeholder="Developer Description"
-              value={form.developer_description}
-              onChange={handleChange}
-              rows={3}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-blue-500/20 focus:border-blue-400 outline-none"
-            />
-            <input
-              type="url"
-              name="github_link"
-              placeholder="Developer GitHub Link"
-              value={form.github_link}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-blue-500/20 focus:border-blue-400 outline-none"
-            />
-            <input
-              type="url"
-              name="whatsapp_channel"
-              placeholder="WhatsApp Channel Link"
-              value={form.whatsapp_channel}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-blue-500/20 focus:border-blue-400 outline-none"
-            />
-            <input
-              type="url"
-              name="whatsapp_group"
-              placeholder="WhatsApp Group Link"
-              value={form.whatsapp_group}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-blue-500/20 focus:border-blue-400 outline-none"
-            />
-            <input
-              type="text"
-              name="whatsapp_number"
-              placeholder="WhatsApp Number"
-              value={form.whatsapp_number}
-              onChange={handleChange}
-              className="w-full p-3 rounded-lg bg-gray-800 border border-blue-500/20 focus:border-blue-400 outline-none"
-            />
-          </div>
-        </section>
-
-        {/* ACTIONS */}
-        <div className="flex gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full p-3 bg-green-500 text-black font-bold rounded-xl hover:bg-green-400 transition disabled:opacity-60"
-          >
-            {loading ? "Saving…" : editingBot ? "Update Bot" : "Post Bot"}
-          </button>
-          {editingBot && (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-5 py-3 bg-gray-600 text-white font-semibold rounded-xl hover:bg-gray-500 transition"
-            >
-              Cancel
-            </button>
-          )}
+        <input type="text" name="name" placeholder="Bot Name *" value={formData.name} onChange={handleChange} className="w-full p-3 bg-black border border-green-400 rounded-lg" />
+        <input type="text" name="developer_name" placeholder="Developer Name *" value={formData.developer_name} onChange={handleChange} className="w-full p-3 bg-black border border-green-400 rounded-lg" />
+        <textarea name="description" placeholder="Description *" value={formData.description} onChange={handleChange} className="w-full p-3 bg-black border border-green-400 rounded-lg" />
+        <input type="text" name="deployment_hosts" placeholder="Deployment Hosts (comma-separated)" value={formData.deployment_hosts} onChange={handleChange} className="w-full p-3 bg-black border border-green-400 rounded-lg" />
+        <input type="url" name="github_url" placeholder="GitHub URL" value={formData.github_url} onChange={handleChange} className="w-full p-3 bg-black border border-green-400 rounded-lg" />
+        <input type="url" name="developer_site" placeholder="Developer Site" value={formData.developer_site} onChange={handleChange} className="w-full p-3 bg-black border border-green-400 rounded-lg" />
+        <select name="status" value={formData.status} onChange={handleChange} className="w-full p-3 bg-black border border-green-400 rounded-lg">
+          <option value="online">Online</option>
+          <option value="offline">Offline</option>
+          <option value="maintenance">Maintenance</option>
+        </select>
+        <div>
+          <label className="block text-green-300 mb-1">Bot Zip File</label>
+          <input type="file" name="zip_file" onChange={handleChange} />
         </div>
+        <div>
+          <label className="block text-green-300 mb-1">Bot Image</label>
+          <input type="file" name="image_file" onChange={handleChange} />
+        </div>
+        <button type="submit" disabled={loading} className="w-full p-3 bg-green-500 text-black font-bold rounded-lg hover:bg-green-400">
+          {loading ? "Saving..." : editingId ? "Update Bot" : "Save Bot"}
+        </button>
       </form>
 
-      {/* ALL BOTS */}
-      <h2 className="text-2xl font-bold mt-10 mb-4">All Bots</h2>
-      <div className="overflow-x-auto">
-        <table className="w-full border border-green-500/20 rounded-xl overflow-hidden">
-          <thead>
-            <tr className="bg-gray-800/70">
-              <th className="p-3 text-left">Name</th>
-              <th className="p-3 text-left">Developer</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-left">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bots.map((bot) => (
-              <tr key={bot.bot_id} className="border-t border-green-500/10">
-                <td className="p-3">{bot.name}</td>
-                <td className="p-3">{bot.developer_name}</td>
-                <td className="p-3">
-                  <span
-                    className={`px-2 py-1 rounded-md text-xs border ${
-                      bot.status === "online"
-                        ? "bg-green-500/15 text-green-300 border-green-400/40"
-                        : "bg-red-500/10 text-red-300 border-red-400/40"
-                    }`}
-                  >
-                    {bot.status}
-                  </span>
-                </td>
-                <td className="p-3 flex gap-2">
-                  <button
-                    onClick={() => editBot(bot)}
-                    className="px-3 py-1.5 bg-yellow-500 text-black rounded-lg hover:bg-yellow-400"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => deleteBot(bot)}
-                    className="px-3 py-1.5 bg-red-500 text-black rounded-lg hover:bg-red-400"
-                  >
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {bots.length === 0 && (
-              <tr>
-                <td className="p-4 text-sm text-gray-400" colSpan={4}>
-                  No bots yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      {/* Bots List */}
+      <div className="mt-10 max-h-[400px] overflow-y-auto border-t border-green-500 pt-4">
+        <h2 className="text-2xl font-bold mb-4">📜 Saved Bots</h2>
+        <div className="grid md:grid-cols-2 gap-4">
+          {bots.map((bot) => (
+            <div key={bot.bot_id} className="bg-gray-800 p-4 rounded-xl shadow-lg border border-green-500">
+              <img src={bot.image_url} alt={bot.name} className="w-full h-40 object-cover rounded-lg mb-2" />
+              <h3 className="text-xl font-bold text-green-400">{bot.name}</h3>
+              <p className="text-sm text-gray-300">{bot.description}</p>
+              <p className="text-xs text-gray-500 mt-1">Developer: {bot.developer_name}</p>
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => handleEdit(bot)} className="flex-1 p-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-400">Edit</button>
+                <button onClick={() => handleDelete(bot.bot_id)} className="flex-1 p-2 bg-red-500 text-white rounded-lg hover:bg-red-400">Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-
-      <footer className="max-w-5xl mx-auto text-center text-xs text-gray-400 mt-10">
-        Admin • Manage Bots & Developer Profiles
-      </footer>
     </div>
   );
     }
