@@ -1,106 +1,74 @@
+// pages/bots.js
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
 
 export default function BotsPage() {
   const [bots, setBots] = useState([]);
 
   useEffect(() => {
-    const fetchBots = async () => {
-      const { data, error } = await supabase
-        .from("bots")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (error) console.error(error);
-      else setBots(data);
-    };
-
     fetchBots();
   }, []);
 
+  async function fetchBots() {
+    const { data, error } = await supabase
+      .from("bots")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) console.error(error);
+    else setBots(data);
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black via-gray-900 to-black text-white py-10 px-6">
-      <h1 className="text-4xl font-bold text-center mb-12">Available Bots</h1>
+    <div className="min-h-screen bg-black text-white px-6 py-12">
+      <h1 className="text-center text-4xl font-extrabold mb-10">
+        <span className="bg-gradient-to-r from-green-400 via-blue-400 to-green-400 bg-clip-text text-transparent">
+          WhatsApp Bots
+        </span>
+      </h1>
 
-      {bots.length === 0 ? (
-        <p className="text-center text-gray-400">No bots posted yet.</p>
-      ) : (
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto">
-          {bots.map((bot) => (
-            <div
-              key={bot.bot_id}
-              className="bg-gray-900 rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-shadow duration-300"
-            >
-              {bot.image_url && (
-                <img
-                  src={bot.image_url}
-                  alt={bot.name}
-                  className="w-full h-48 object-cover"
-                />
-              )}
-              <div className="p-5 space-y-4">
-                <h2 className="text-2xl font-bold">{bot.name}</h2>
-                <p className="text-sm text-gray-400">By {bot.developer_name}</p>
-                {bot.version && (
-                  <p className="text-sm text-gray-500">Version: {bot.version}</p>
-                )}
-                <p className="text-gray-300">{bot.description}</p>
+      <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        {bots.map((bot) => (
+          <div
+            key={bot.bot_id}
+            className="rounded-2xl border border-green-500/30 bg-gradient-to-b from-black to-green-900/10 p-6 shadow-lg hover:shadow-green-500/40 hover:border-green-400 transform hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300"
+          >
+            {/* Bot Name */}
+            <h2 className="text-2xl font-bold text-green-400 mb-2">
+              {bot.name}
+            </h2>
 
-                {/* Hosting badges */}
-                {bot.deployment_hosts?.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {bot.deployment_hosts.map((host) => (
-                      <span
-                        key={host}
-                        className="px-3 py-1 bg-green-600 text-xs rounded-full"
-                      >
-                        {host}
-                      </span>
-                    ))}
-                  </div>
-                )}
+            {/* Developer Name */}
+            <p className="text-sm text-blue-300 mb-4">by {bot.developer_name}</p>
 
-                {/* Status */}
-                <p
-                  className={`font-bold ${
-                    bot.status === "online"
-                      ? "text-green-400"
-                      : bot.status === "offline"
-                      ? "text-red-400"
-                      : "text-yellow-400"
-                  }`}
+            {/* Hosting Badges */}
+            <div className="flex flex-wrap gap-2 mb-4">
+              {bot.deployment_hosts?.map((host, idx) => (
+                <span
+                  key={idx}
+                  className="px-3 py-1 rounded-full bg-green-500/10 text-green-300 text-xs border border-green-400/30"
                 >
-                  {bot.status}
-                </p>
-
-                {/* Actions */}
-                <div className="flex gap-3 pt-4">
-                  {bot.github_url && (
-                    <a
-                      href={bot.github_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm"
-                    >
-                      GitHub
-                    </a>
-                  )}
-                  {bot.zip_file_url && (
-                    <a
-                      href={bot.zip_file_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-sm"
-                    >
-                      Download ZIP
-                    </a>
-                  )}
-                </div>
-              </div>
+                  {host}
+                </span>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+
+            {/* Actions */}
+            <div className="flex items-center gap-4 mt-4">
+              <button className="flex items-center gap-1 text-green-400 hover:text-green-300">
+                <ThumbsUp size={18} /> {bot.likes || 0}
+              </button>
+              <button className="flex items-center gap-1 text-red-400 hover:text-red-300">
+                <ThumbsDown size={18} /> {bot.dislikes || 0}
+              </button>
+              <button className="flex items-center gap-1 text-blue-400 hover:text-blue-300">
+                <MessageSquare size={18} /> Comment
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
