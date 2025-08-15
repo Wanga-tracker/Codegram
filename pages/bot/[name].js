@@ -204,3 +204,4 @@ export default function BotDetails() {
     </div>
   );
 }
+  
