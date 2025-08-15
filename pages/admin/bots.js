@@ -1,24 +1,31 @@
-// pages/admin/bots.js
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 
 export default function AdminBots() {
-  const [bots, setBots] = useState([]);
-  const [formData, setFormData] = useState({
+  const [botData, setBotData] = useState({
     name: "",
-    description: "",
-    status: "online",
     developer_name: "",
-    developer_description: "",
-    github_link: "",
+    description: "",
+    zip_file_url: "",
+    image_url: "",
+    deployment_hosts: [],
+    github_url: "",
+    rank: "",
+    status: "Online",
     developer_site: "",
+    // Developer fields
+    developer_description: "",
+    dev_github_link: "",
+    dev_site: "",
     whatsapp_channel: "",
     whatsapp_group: "",
     whatsapp_number: ""
   });
-  const [editId, setEditId] = useState(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
+
+  const [botsList, setBotsList] = useState([]);
+
+  const deploymentOptions = ["Heroku", "Render", "Railway", "Vercel", "Other"];
 
   useEffect(() => {
     fetchBots();
@@ -29,161 +36,144 @@ export default function AdminBots() {
       .from("bots")
       .select("*, developers(*)")
       .order("created_at", { ascending: false });
-    if (error) {
-      console.error(error);
-    } else {
-      setBots(data);
-    }
+
+    if (error) toast.error(error.message);
+    else setBotsList(data);
   }
 
-  function handleChange(e) {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  }
+  const handleCheckboxChange = (option) => {
+    setBotData((prev) => {
+      const updated = prev.deployment_hosts.includes(option)
+        ? prev.deployment_hosts.filter((o) => o !== option)
+        : [...prev.deployment_hosts, option];
+      return { ...prev, deployment_hosts: updated };
+    });
+  };
 
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    if (!formData.name) {
-      toast.error("Bot name is required");
+  async function saveBot() {
+    if (!botData.name || !botData.developer_name) {
+      toast.error("Bot Name and Developer Name are required");
       return;
     }
 
-    // Insert or update bot
-    const botPayload = {
-      name: formData.name,
-      description: formData.description,
-      status: formData.status
-    };
+    const { error: botError } = await supabase.from("bots").upsert({
+      name: botData.name,
+      developer_name: botData.developer_name,
+      description: botData.description,
+      zip_file_url: botData.zip_file_url,
+      image_url: botData.image_url,
+      deployment_hosts: botData.deployment_hosts,
+      github_url: botData.github_url,
+      rank: botData.rank,
+      status: botData.status,
+      developer_site: botData.developer_site
+    });
 
-    let botResult;
-    if (editId) {
-      botResult = await supabase.from("bots").update(botPayload).eq("id", editId).select();
-    } else {
-      botResult = await supabase.from("bots").insert([botPayload]).select();
-    }
-
-    if (botResult.error) {
-      toast.error(botResult.error.message);
+    if (botError) {
+      toast.error(botError.message);
       return;
     }
 
-    const botName = formData.name;
-
-    // Insert or update developer
-    const devPayload = {
-      bot_name: botName,
-      developer_name: formData.developer_name,
-      developer_description: formData.developer_description,
-      github_link: formData.github_link,
-      developer_site: formData.developer_site,
-      whatsapp_channel: formData.whatsapp_channel,
-      whatsapp_group: formData.whatsapp_group,
-      whatsapp_number: formData.whatsapp_number
-    };
-
-    const { error: devError } = await supabase
-      .from("developers")
-      .upsert([devPayload], { onConflict: "bot_name" });
+    const { error: devError } = await supabase.from("developers").upsert({
+      bot_name: botData.name,
+      developer_name: botData.developer_name,
+      developer_description: botData.developer_description,
+      github_link: botData.dev_github_link,
+      developer_site: botData.dev_site,
+      whatsapp_channel: botData.whatsapp_channel,
+      whatsapp_group: botData.whatsapp_group,
+      whatsapp_number: botData.whatsapp_number
+    });
 
     if (devError) {
       toast.error(devError.message);
       return;
     }
 
-    toast.success(editId ? "Bot updated successfully" : "Bot created successfully");
-    setFormData({
+    toast.success("Bot & Developer saved successfully");
+    setBotData({
       name: "",
-      description: "",
-      status: "online",
       developer_name: "",
-      developer_description: "",
-      github_link: "",
+      description: "",
+      zip_file_url: "",
+      image_url: "",
+      deployment_hosts: [],
+      github_url: "",
+      rank: "",
+      status: "Online",
       developer_site: "",
+      developer_description: "",
+      dev_github_link: "",
+      dev_site: "",
       whatsapp_channel: "",
       whatsapp_group: "",
       whatsapp_number: ""
     });
-    setEditId(null);
     fetchBots();
   }
 
-  async function handleDelete(id) {
-    const { error } = await supabase.from("bots").delete().eq("id", id);
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success("Bot deleted");
-      fetchBots();
+  async function deleteBot(name) {
+    if (confirm(`Delete bot "${name}"?`)) {
+      const { error } = await supabase.from("bots").delete().eq("name", name);
+      if (error) toast.error(error.message);
+      else {
+        toast.success("Bot deleted");
+        fetchBots();
+      }
     }
   }
 
   return (
-    <div className="p-6 bg-gray-900 min-h-screen text-white">
-      <Toaster />
-      <h1 className="text-2xl font-bold mb-4">Manage Bots</h1>
-
-      {/* Bot Form */}
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 bg-gray-800 p-4 rounded-lg">
-        <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Bot Name" className="p-2 bg-gray-700 rounded" />
-        <textarea name="description" value={formData.description} onChange={handleChange} placeholder="Bot Description" className="p-2 bg-gray-700 rounded" />
-        <select name="status" value={formData.status} onChange={handleChange} className="p-2 bg-gray-700 rounded">
-          <option value="online">Online</option>
-          <option value="offline">Offline</option>
-          <option value="maintenance">Maintenance</option>
+    <div className="p-6 space-y-6">
+      <h1 className="text-2xl font-bold text-neon-green">Add / Edit Bot</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Bot Fields */}
+        <input placeholder="Bot Name" value={botData.name} onChange={(e) => setBotData({ ...botData, name: e.target.value })} className="input" />
+        <input placeholder="Developer Name" value={botData.developer_name} onChange={(e) => setBotData({ ...botData, developer_name: e.target.value })} className="input" />
+        <textarea placeholder="Description" value={botData.description} onChange={(e) => setBotData({ ...botData, description: e.target.value })} className="input" />
+        <input placeholder="ZIP File URL" value={botData.zip_file_url} onChange={(e) => setBotData({ ...botData, zip_file_url: e.target.value })} className="input" />
+        <input placeholder="Image URL" value={botData.image_url} onChange={(e) => setBotData({ ...botData, image_url: e.target.value })} className="input" />
+        {/* Deployment Hosts */}
+        <div className="col-span-2">
+          <p className="font-semibold">Deployment Hosts:</p>
+          <div className="flex flex-wrap gap-3">
+            {deploymentOptions.map((opt) => (
+              <label key={opt} className="flex items-center gap-2">
+                <input type="checkbox" checked={botData.deployment_hosts.includes(opt)} onChange={() => handleCheckboxChange(opt)} />
+                {opt}
+              </label>
+            ))}
+          </div>
+        </div>
+        <input placeholder="GitHub URL" value={botData.github_url} onChange={(e) => setBotData({ ...botData, github_url: e.target.value })} className="input" />
+        <input placeholder="Rank" value={botData.rank} onChange={(e) => setBotData({ ...botData, rank: e.target.value })} className="input" />
+        <select value={botData.status} onChange={(e) => setBotData({ ...botData, status: e.target.value })} className="input">
+          <option>Online</option>
+          <option>Offline</option>
+          <option>Maintenance</option>
         </select>
-        <input type="text" name="developer_name" value={formData.developer_name} onChange={handleChange} placeholder="Developer Name" className="p-2 bg-gray-700 rounded" />
-        <textarea name="developer_description" value={formData.developer_description} onChange={handleChange} placeholder="Developer Description" className="p-2 bg-gray-700 rounded" />
-        <input type="text" name="github_link" value={formData.github_link} onChange={handleChange} placeholder="GitHub Link" className="p-2 bg-gray-700 rounded" />
-        <input type="text" name="developer_site" value={formData.developer_site} onChange={handleChange} placeholder="Developer Site" className="p-2 bg-gray-700 rounded" />
-        <input type="text" name="whatsapp_channel" value={formData.whatsapp_channel} onChange={handleChange} placeholder="WhatsApp Channel" className="p-2 bg-gray-700 rounded" />
-        <input type="text" name="whatsapp_group" value={formData.whatsapp_group} onChange={handleChange} placeholder="WhatsApp Group" className="p-2 bg-gray-700 rounded" />
-        <input type="text" name="whatsapp_number" value={formData.whatsapp_number} onChange={handleChange} placeholder="WhatsApp Number" className="p-2 bg-gray-700 rounded" />
+        <input placeholder="Developer Site" value={botData.developer_site} onChange={(e) => setBotData({ ...botData, developer_site: e.target.value })} className="input" />
 
-        <button type="submit" className="bg-green-500 hover:bg-green-600 text-white p-2 rounded">
-          {editId ? "Update Bot" : "Create Bot"}
-        </button>
-      </form>
+        {/* Developer Fields */}
+        <textarea placeholder="Developer Description" value={botData.developer_description} onChange={(e) => setBotData({ ...botData, developer_description: e.target.value })} className="input" />
+        <input placeholder="Developer GitHub Link" value={botData.dev_github_link} onChange={(e) => setBotData({ ...botData, dev_github_link: e.target.value })} className="input" />
+        <input placeholder="Developer Site" value={botData.dev_site} onChange={(e) => setBotData({ ...botData, dev_site: e.target.value })} className="input" />
+        <input placeholder="WhatsApp Channel Link" value={botData.whatsapp_channel} onChange={(e) => setBotData({ ...botData, whatsapp_channel: e.target.value })} className="input" />
+        <input placeholder="WhatsApp Group Link" value={botData.whatsapp_group} onChange={(e) => setBotData({ ...botData, whatsapp_group: e.target.value })} className="input" />
+        <input placeholder="WhatsApp Number" value={botData.whatsapp_number} onChange={(e) => setBotData({ ...botData, whatsapp_number: e.target.value })} className="input" />
+      </div>
 
-      {/* Bot List */}
-      <div className="space-y-4 overflow-y-auto max-h-[500px]">
-        {bots.map(bot => (
-          <div key={bot.id} className="p-4 bg-gray-800 rounded-lg">
-            <h2 className="text-xl font-bold">{bot.name}</h2>
-            <p>{bot.description}</p>
-            <p>Status: <span className="capitalize">{bot.status}</span></p>
-            {bot.developers && bot.developers.length > 0 && (
-              <div className="mt-2 p-2 bg-gray-700 rounded">
-                <h3 className="font-semibold">Developer Info</h3>
-                <p>{bot.developers[0].developer_name}</p>
-                <p>{bot.developers[0].developer_description}</p>
-              </div>
-            )}
+      <button onClick={saveBot} className="bg-neon-green text-black px-6 py-2 rounded">Save Bot</button>
 
-            {confirmDeleteId === bot.id ? (
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => handleDelete(bot.id)} className="bg-red-500 px-3 py-1 rounded">Yes</button>
-                <button onClick={() => setConfirmDeleteId(null)} className="bg-gray-500 px-3 py-1 rounded">No</button>
-              </div>
-            ) : (
-              <div className="mt-2 flex gap-2">
-                <button onClick={() => {
-                  setFormData({
-                    name: bot.name,
-                    description: bot.description,
-                    status: bot.status,
-                    developer_name: bot.developers?.[0]?.developer_name || "",
-                    developer_description: bot.developers?.[0]?.developer_description || "",
-                    github_link: bot.developers?.[0]?.github_link || "",
-                    developer_site: bot.developers?.[0]?.developer_site || "",
-                    whatsapp_channel: bot.developers?.[0]?.whatsapp_channel || "",
-                    whatsapp_group: bot.developers?.[0]?.whatsapp_group || "",
-                    whatsapp_number: bot.developers?.[0]?.whatsapp_number || ""
-                  });
-                  setEditId(bot.id);
-                }} className="bg-blue-500 px-3 py-1 rounded">Edit</button>
-                <button onClick={() => setConfirmDeleteId(bot.id)} className="bg-red-500 px-3 py-1 rounded">Delete</button>
-              </div>
-            )}
+      {/* Bots List */}
+      <div className="mt-8 space-y-4 max-h-96 overflow-y-auto">
+        {botsList.map((bot) => (
+          <div key={bot.name} className="p-4 bg-gray-800 rounded flex justify-between items-center">
+            <div>
+              <p className="font-bold">{bot.name}</p>
+              <p className="text-sm">{bot.developer_name}</p>
+            </div>
+            <button onClick={() => deleteBot(bot.name)} className="text-red-500">Delete</button>
           </div>
         ))}
       </div>
