@@ -1,10 +1,11 @@
-// pages/bots.js
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { ThumbsUp, ThumbsDown, MessageSquare } from "lucide-react";
+import { ThumbsUp, ThumbsDown, MessageSquare, ArrowRight } from "lucide-react";
+import { useRouter } from "next/router";
 
 export default function BotsPage() {
   const [bots, setBots] = useState([]);
+  const router = useRouter();
 
   useEffect(() => {
     fetchBots();
@@ -18,6 +19,28 @@ export default function BotsPage() {
 
     if (error) console.error(error);
     else setBots(data);
+  }
+
+  async function handleVote(botId, type) {
+    const storageKey = `vote-${botId}`;
+    if (localStorage.getItem(storageKey)) return alert("You already voted!");
+
+    const bot = bots.find((b) => b.bot_id === botId);
+    const newCount = (bot[type] || 0) + 1;
+
+    const { error } = await supabase
+      .from("bots")
+      .update({ [type]: newCount })
+      .eq("bot_id", botId);
+
+    if (!error) {
+      setBots((prev) =>
+        prev.map((b) =>
+          b.bot_id === botId ? { ...b, [type]: newCount } : b
+        )
+      );
+      localStorage.setItem(storageKey, "true");
+    }
   }
 
   return (
@@ -34,15 +57,13 @@ export default function BotsPage() {
             key={bot.bot_id}
             className="rounded-2xl border border-green-500/30 bg-gradient-to-b from-black to-green-900/10 p-6 shadow-lg hover:shadow-green-500/40 hover:border-green-400 transform hover:-translate-y-1 hover:scale-[1.02] transition-all duration-300"
           >
-            {/* Bot Name */}
             <h2 className="text-2xl font-bold text-green-400 mb-2">
               {bot.name}
             </h2>
+            <p className="text-sm text-blue-300 mb-4">
+              by {bot.developer_name}
+            </p>
 
-            {/* Developer Name */}
-            <p className="text-sm text-blue-300 mb-4">by {bot.developer_name}</p>
-
-            {/* Hosting Badges */}
             <div className="flex flex-wrap gap-2 mb-4">
               {bot.deployment_hosts?.map((host, idx) => (
                 <span
@@ -54,18 +75,35 @@ export default function BotsPage() {
               ))}
             </div>
 
-            {/* Actions */}
             <div className="flex items-center gap-4 mt-4">
-              <button className="flex items-center gap-1 text-green-400 hover:text-green-300">
+              <button
+                onClick={() => handleVote(bot.bot_id, "likes")}
+                className="flex items-center gap-1 text-green-400 hover:text-green-300"
+              >
                 <ThumbsUp size={18} /> {bot.likes || 0}
               </button>
-              <button className="flex items-center gap-1 text-red-400 hover:text-red-300">
+
+              <button
+                onClick={() => handleVote(bot.bot_id, "dislikes")}
+                className="flex items-center gap-1 text-red-400 hover:text-red-300"
+              >
                 <ThumbsDown size={18} /> {bot.dislikes || 0}
               </button>
-              <button className="flex items-center gap-1 text-blue-400 hover:text-blue-300">
+
+              <button
+                onClick={() => router.push(`/bot/${bot.name.replace(/\s+/g, "-")}`)}
+                className="flex items-center gap-1 text-blue-400 hover:text-blue-300"
+              >
                 <MessageSquare size={18} /> Comment
               </button>
             </div>
+
+            <button
+              onClick={() => router.push(`/bot/${bot.name.replace(/\s+/g, "-")}`)}
+              className="mt-6 w-full flex items-center justify-center gap-2 rounded-lg border border-green-400 text-green-300 py-2 hover:bg-green-500/10 transition"
+            >
+              See More <ArrowRight size={16} />
+            </button>
           </div>
         ))}
       </div>
