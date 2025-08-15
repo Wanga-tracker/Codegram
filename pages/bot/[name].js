@@ -1,7 +1,23 @@
-// pages/bots/[name].js
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import DOMPurify from "dompurify";
+import { marked } from "marked";
+
+// Simple helper to turn links into clickable HTML
+function autoLinkify(text) {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  return text.replace(urlRegex, (url) => {
+    // If it's media, embed
+    if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+      return `<img src="${url}" alt="Image" class="rounded-lg my-2 max-w-full"/>`;
+    }
+    if (url.match(/\.(mp4|webm)$/i)) {
+      return `<video controls class="rounded-lg my-2 max-w-full"><source src="${url}" type="video/mp4"/></video>`;
+    }
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-green-400 underline">${url}</a>`;
+  });
+}
 
 export default function BotDetails() {
   const router = useRouter();
@@ -22,7 +38,6 @@ export default function BotDetails() {
     if (name) {
       fetchData(name);
 
-      // Realtime updates
       const channel = supabase
         .channel("bot_interactions")
         .on(
@@ -39,7 +54,6 @@ export default function BotDetails() {
   async function fetchData(botName) {
     setLoading(true);
 
-    // Bot details
     const { data: botData } = await supabase
       .from("bots")
       .select("*")
@@ -52,7 +66,6 @@ export default function BotDetails() {
     }
     setBot(botData);
 
-    // Developer details
     const { data: devData } = await supabase
       .from("developers")
       .select("*")
@@ -60,7 +73,6 @@ export default function BotDetails() {
       .maybeSingle();
     setDeveloper(devData);
 
-    // Interactions
     fetchInteractions(botData.bot_id);
     setLoading(false);
   }
@@ -98,6 +110,28 @@ export default function BotDetails() {
     setNewComment("");
   }
 
+  function renderDescription(desc) {
+    if (!desc) return "";
+    let htmlContent = "";
+
+    try {
+      if (desc.includes("<")) {
+        // HTML already — sanitize
+        htmlContent = DOMPurify.sanitize(desc);
+      } else {
+        // Markdown — convert, then sanitize
+        htmlContent = DOMPurify.sanitize(marked.parse(desc));
+      }
+      // Auto linkify and embed
+      htmlContent = autoLinkify(htmlContent);
+    } catch (e) {
+      console.error("Description render error:", e);
+      htmlContent = desc;
+    }
+
+    return { __html: htmlContent };
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center text-green-400">
@@ -128,7 +162,7 @@ export default function BotDetails() {
           <p><strong>Name:</strong> {bot.name}</p>
           <p><strong>Developer:</strong> {bot.developer_name}</p>
           <p><strong>Status:</strong> {bot.status}</p>
-          <p><strong>Description:</strong> {bot.description}</p>
+          <div className="mt-4 prose prose-invert max-w-none" dangerouslySetInnerHTML={renderDescription(bot.description)} />
         </div>
 
         {/* DEVELOPER INFO */}
@@ -203,5 +237,4 @@ export default function BotDetails() {
       </div>
     </div>
   );
-}
-  
+                      }
