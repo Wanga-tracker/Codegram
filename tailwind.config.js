@@ -1,3 +1,5 @@
+const { fontFamily } = require("tailwindcss/defaultTheme");
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -6,7 +8,6 @@ module.exports = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   safelist: [
-    // keep neon utilities from being purged
     "text-neon-green","bg-neon-green","hover:shadow-neon-green",
     "text-neon-purple","bg-neon-purple","hover:shadow-neon-purple",
     "text-neon-cyan","bg-neon-cyan","hover:shadow-neon-cyan",
@@ -17,7 +18,6 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // brand + neutrals
         bg: "#000000",
         surface: "#0b0b0f",
         ink: "#e5e7eb",
@@ -28,14 +28,34 @@ module.exports = {
           pink: "#ff00ff",
           yellow: "#ffff00",
         },
+        brand: {
+          green: "#00FFA3",
+          blue: "#00BFFF",
+          purple: "#8B5CF6",
+          yellow: "#FFD166",
+          red: "#FF4D6D",
+        },
+        dark: {
+          bg: "#0D0D0D",
+          card: "#1A1A1A",
+          border: "#2A2A2A",
+        },
+      },
+      fontFamily: {
+        sans: ["Inter", ...fontFamily.sans],
+        mono: ["Fira Code", ...fontFamily.mono],
       },
       boxShadow: {
         neon: "0 0 10px rgba(57,255,20,0.6), 0 0 20px rgba(57,255,20,0.5), 0 0 40px rgba(57,255,20,0.4)",
         "neon-purple": "0 0 10px rgba(157,0,255,0.6), 0 0 20px rgba(157,0,255,0.5), 0 0 40px rgba(157,0,255,0.4)",
         "neon-cyan": "0 0 10px rgba(0,255,255,0.6), 0 0 20px rgba(0,255,255,0.5), 0 0 40px rgba(0,255,255,0.4)",
+        glow: "0 0 20px rgba(0,255,163,0.3)",
       },
       dropShadow: {
         glow: "0 0 10px rgba(0,255,255,0.6)",
+      },
+      borderRadius: {
+        xl2: "1rem",
       },
       keyframes: {
         "pulse-glow": {
@@ -56,48 +76,6 @@ module.exports = {
         "fade-up": "fade-up .35s ease-out both",
         "slide-in": "slide-in .25s ease-out both",
       },
-      borderRadius: {
-        xl2: "1rem",
-      },
-    },
-  },
-  plugins: [
-    require("@tailwindcss/forms"),
-    require("@tailwindcss/typography"),
-    require("@tailwindcss/line-clamp"),
-  ],
-};
-// tailwind.config.js
-const { fontFamily } = require("tailwindcss/defaultTheme")
-
-module.exports = {
-  content: [
-    "./pages/**/*.{js,ts,jsx,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}"
-  ],
-  theme: {
-    extend: {
-      colors: {
-        brand: {
-          green: "#00FFA3",
-          blue: "#00BFFF",
-          purple: "#8B5CF6",
-          yellow: "#FFD166",
-          red: "#FF4D6D",
-        },
-        dark: {
-          bg: "#0D0D0D",
-          card: "#1A1A1A",
-          border: "#2A2A2A",
-        },
-      },
-      fontFamily: {
-        sans: ["Inter", ...fontFamily.sans],
-        mono: ["Fira Code", ...fontFamily.mono],
-      },
-      boxShadow: {
-        glow: "0 0 20px rgba(0,255,163,0.3)",
-      },
     },
   },
   plugins: [
@@ -106,4 +84,4 @@ module.exports = {
     require("@tailwindcss/aspect-ratio"),
     require("@tailwindcss/line-clamp"),
   ],
-    }
+};
