@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Image from "next/image";
-import { Bars3Icon, BellIcon } from "@heroicons/react/24/outline";
+import { Bars3Icon } from "@heroicons/react/24/solid";
+import { BellIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { supabase } from "../lib/supabaseClient";
 
 export default function UserDashboard() {
@@ -10,182 +11,183 @@ export default function UserDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("bots");
   const [bots, setBots] = useState([]);
-  const [panels, setPanels] = useState([]);
-  const [latest, setLatest] = useState([]);
+  const [username, setUsername] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      const { data: botsData } = await supabase
+    const fetchBots = async () => {
+      const { data, error } = await supabase
         .from("bots")
         .select("*")
         .order("created_at", { ascending: false });
-
-      const { data: panelsData } = await supabase
-        .from("panels")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      const { data: newsData } = await supabase
-        .from("news")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(3);
-
-      setBots(botsData || []);
-      setPanels(panelsData || []);
-      setLatest(newsData || []);
+      if (!error) setBots(data || []);
     };
-    fetchData();
+
+    const fetchUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("username")
+          .eq("id", user.id)
+          .single();
+
+        setUsername(profile?.username || user.email);
+      } else {
+        setUsername(null);
+      }
+    };
+
+    fetchBots();
+    fetchUser();
   }, []);
 
   const tabs = [
     { key: "bots", label: "Bots" },
-    { key: "panels", label: "Panels" },
-    { key: "latest", label: "Latest" },
-  ];
-
-  const sidebarLinks = [
-    { label: "Profile", href: "/profile" },
-    { label: "API", href: "/api" },
-    { label: "Bots", href: "/bots" },
-    { label: "Panels", href: "/panels" },
-    { label: "Web", href: "/web" },
-    { label: "Support", href: "/support" },
+    { key: "post", label: "Post" },
   ];
 
   return (
-    <div className="flex min-h-screen bg-dark-bg text-gray-100">
+    <div className="flex min-h-screen bg-dark-bg text-white">
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-dark-card border-r border-dark-border p-6 transform transition-transform duration-300 ease-in-out z-50
-        ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
+        className={`fixed top-0 left-0 h-full w-56 bg-dark-card p-6 transform transition-transform duration-500 ease-in-out z-50 
+          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
-        <div className="flex justify-between items-center mb-8">
-          <h2 className="text-xl font-bold text-brand-green">CODEGRAM</h2>
-          <button className="md:hidden" onClick={() => setSidebarOpen(false)}>✕</button>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-extrabold text-brand-green tracking-wide">
+            CODEGRAM
+          </h2>
+          <button className="md:hidden" onClick={() => setSidebarOpen(false)}>
+            ✕
+          </button>
         </div>
-        <nav className="space-y-3">
-          {sidebarLinks.map((link) => (
+        <nav className="space-y-4">
+          {tabs.map((tab) => (
             <div
-              key={link.href}
-              onClick={() => router.push(link.href)}
-              className="cursor-pointer px-3 py-2 rounded-md hover:bg-brand-green hover:text-black transition"
+              key={tab.key}
+              onClick={() =>
+                tab.key === "post"
+                  ? router.push("/post")
+                  : setActiveTab(tab.key)
+              }
+              className={`cursor-pointer px-4 py-2 rounded-lg font-semibold tracking-wide transition-all duration-300
+              ${
+                activeTab === tab.key
+                  ? "bg-brand-green text-black shadow-glow"
+                  : "bg-dark-border text-gray-300 hover:bg-gray-700"
+              }`}
             >
-              {link.label}
+              {tab.key === "post" ? (
+                <span className="flex items-center gap-2">
+                  <PlusIcon className="w-5 h-5" /> {tab.label}
+                </span>
+              ) : (
+                tab.label
+              )}
             </div>
           ))}
         </nav>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-6">
-        {/* Mobile Header */}
+      <main className="flex-1 md:ml-56 p-6">
+        {/* Mobile Hamburger */}
         <div className="flex items-center justify-between mb-6 md:hidden">
           <button
-            className="text-brand-green"
+            className="text-brand-blue"
             onClick={() => setSidebarOpen(true)}
           >
             <Bars3Icon className="w-8 h-8" />
           </button>
-          <span className="font-bold text-brand-green text-lg">CODEGRAM</span>
+          <span className="font-bold text-brand-green text-xl">CODEGRAM</span>
         </div>
 
-        {/* Hero */}
-        <div className="flex flex-col items-center bg-dark-card p-6 rounded-xl mb-6 shadow-glow">
-          <div className="flex justify-between w-full mb-4">
+        {/* Hero Section */}
+        <div className="flex flex-col items-center justify-center bg-dark-card p-6 rounded-2xl mb-6 shadow-glow animate-fadeIn">
+          <div className="flex justify-between w-full items-center mb-4">
             <button
               onClick={() => router.push("/code")}
-              className="text-brand-purple font-bold text-xl hover:opacity-80"
+              className="text-brand-purple font-bold text-xl hover:scale-110 transition-transform"
             >
               &lt;/&gt;
             </button>
             <BellIcon
-              className="w-6 h-6 cursor-pointer text-brand-blue hover:text-brand-green transition"
+              className="w-6 h-6 cursor-pointer text-brand-blue hover:scale-110 transition-transform"
               onClick={() => router.push("/notifications")}
             />
           </div>
-          <h1 className="text-2xl font-bold text-brand-green mb-2">
-            Welcome back, Tracker Wanga 👋
+          <h1 className="text-3xl font-extrabold text-brand-green mb-2 animate-fadeInUp">
+            Welcome back, {username ? username : "Guest"} 👋
           </h1>
           <Image
             src="/IMG-20250813-WA0001.jpg"
             alt="Profile"
-            width={80}
-            height={80}
-            className="rounded-full border border-brand-green mt-3"
+            width={90}
+            height={90}
+            className="rounded-full border-2 border-brand-green mt-4 animate-pulse"
           />
         </div>
 
-        {/* Tabs */}
-        <div className="flex justify-center gap-4 mb-6">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 rounded-full text-sm font-semibold transition
-                ${activeTab === tab.key
-                  ? "bg-brand-green text-black"
-                  : "bg-dark-card text-gray-300 hover:bg-dark-border"}`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
         {/* Tab Content */}
-        <div className="grid gap-4">
+        <div className="space-y-6">
           {activeTab === "bots" &&
             (bots.length ? (
               bots.map((b) => (
                 <div
                   key={b.bot_id}
-                  className="p-4 rounded-lg bg-dark-card border border-dark-border hover:border-brand-green transition"
+                  className="p-6 rounded-xl bg-dark-card shadow-md hover:shadow-glow transition-all duration-500 transform hover:scale-[1.02] animate-fadeIn"
                 >
-                  <h3 className="font-bold text-brand-green">{b.name}</h3>
-                  <p className="text-gray-400">{b.description}</p>
-                  <p className="text-xs text-gray-500">{b.status || "offline"}</p>
+                  <h3 className="text-2xl font-bold text-brand-green tracking-wide">
+                    {b.name}
+                  </h3>
+                  <p className="text-gray-400 mt-2">{b.description}</p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    {b.status || "offline"}
+                  </p>
                 </div>
               ))
             ) : (
-              <p className="text-gray-400">No bots available</p>
-            ))}
-
-          {activeTab === "panels" &&
-            (panels.length ? (
-              panels.map((p) => (
-                <div
-                  key={p.id}
-                  className="p-4 rounded-lg bg-dark-card border border-dark-border hover:border-brand-purple transition"
-                >
-                  <h3 className="font-bold text-brand-purple">{p.title}</h3>
-                  <p className="text-gray-400">{p.description}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-400">No panels available</p>
-            ))}
-
-          {activeTab === "latest" &&
-            (latest.length ? (
-              latest.map((l) => (
-                <div
-                  key={l.id}
-                  className="p-4 rounded-lg bg-dark-card border border-dark-border hover:border-brand-blue transition"
-                >
-                  <h3 className="font-bold text-brand-blue">{l.title}</h3>
-                  <p className="text-gray-400">{l.content}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-400">No updates yet</p>
+              <p className="text-gray-400">Nothing is up yet</p>
             ))}
         </div>
 
         {/* Footer */}
-        <footer className="mt-12 text-center text-gray-500 text-sm">
-          Tracker Wanga © {new Date().getFullYear()}
+        <footer className="mt-12 text-center text-gray-500">
+          CODEGRAM © {new Date().getFullYear()}
         </footer>
       </main>
+
+      {/* Animations */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.8s ease forwards;
+        }
+
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeInUp {
+          animation: fadeInUp 0.8s ease forwards;
+        }
+      `}</style>
     </div>
   );
-    }
+  }
