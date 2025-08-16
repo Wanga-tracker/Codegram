@@ -203,7 +203,7 @@ export default function BotsPage() {
                 {/* See More */}
                 <button
                   onClick={() =>
-                    router.push(`/bot/${bot.name.replace(/\s+/g, "-")}`)
+                    router.push(`/bots/${bot.name.replace(/\s+/g, "-")}`)
                   }
                   className="mt-6 w-full flex items-center justify-center gap-2 rounded-lg border border-green-400 text-green-300 py-2 hover:bg-green-500/10 transition"
                 >
