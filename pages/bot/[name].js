@@ -8,7 +8,6 @@ import { marked } from "marked";
 function autoLinkify(text) {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   return text.replace(urlRegex, (url) => {
-    // If it's media, embed
     if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
       return `<img src="${url}" alt="Image" class="rounded-lg my-2 max-w-full"/>`;
     }
@@ -113,23 +112,28 @@ export default function BotDetails() {
   function renderDescription(desc) {
     if (!desc) return "";
     let htmlContent = "";
-
     try {
       if (desc.includes("<")) {
-        // HTML already — sanitize
         htmlContent = DOMPurify.sanitize(desc);
       } else {
-        // Markdown — convert, then sanitize
         htmlContent = DOMPurify.sanitize(marked.parse(desc));
       }
-      // Auto linkify and embed
       htmlContent = autoLinkify(htmlContent);
     } catch (e) {
       console.error("Description render error:", e);
       htmlContent = desc;
     }
-
     return { __html: htmlContent };
+  }
+
+  function handleDownload() {
+    if (!bot?.zip_file_url) return alert("No download available.");
+    const link = document.createElement("a");
+    link.href = bot.zip_file_url;
+    link.download = `${bot.name}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   if (loading) {
@@ -163,6 +167,15 @@ export default function BotDetails() {
           <p><strong>Developer:</strong> {bot.developer_name}</p>
           <p><strong>Status:</strong> {bot.status}</p>
           <div className="mt-4 prose prose-invert max-w-none" dangerouslySetInnerHTML={renderDescription(bot.description)} />
+
+          {bot.zip_file_url && (
+            <button
+              onClick={handleDownload}
+              className="mt-4 bg-green-500 text-black px-6 py-2 rounded-lg font-bold hover:bg-green-400 transition"
+            >
+              ⬇️ Download Bot
+            </button>
+          )}
         </div>
 
         {/* DEVELOPER INFO */}
@@ -171,6 +184,26 @@ export default function BotDetails() {
             <h2 className="text-2xl font-bold text-blue-400 mb-4">👨‍💻 Developer Info</h2>
             <p><strong>Name:</strong> {developer.developer_name}</p>
             <p>{developer.developer_description}</p>
+
+            {(developer.contact_email || bot.developer_site) && (
+              <div className="mt-4 space-y-2">
+                <h3 className="text-lg font-bold text-blue-300">📞 Contact</h3>
+                {developer.contact_email && (
+                  <p>
+                    <a href={`mailto:${developer.contact_email}`} className="text-green-400 underline">
+                      {developer.contact_email}
+                    </a>
+                  </p>
+                )}
+                {bot.developer_site && (
+                  <p>
+                    <a href={bot.developer_site} target="_blank" rel="noopener noreferrer" className="text-green-400 underline">
+                      Developer Website
+                    </a>
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -237,4 +270,4 @@ export default function BotDetails() {
       </div>
     </div>
   );
-                      }
+  }
