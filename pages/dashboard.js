@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import { Bars3Icon } from "@heroicons/react/24/solid";
-import { BellIcon } from "@heroicons/react/24/outline"; // ✅ Corrected
+import { BellIcon, PlusCircleIcon, CpuChipIcon } from "@heroicons/react/24/outline"; 
 import { supabase } from "../lib/supabaseClient";
 
 export default function UserDashboard() {
@@ -11,86 +11,44 @@ export default function UserDashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("bots");
   const [bots, setBots] = useState([]);
-  const [panels, setPanels] = useState([]);
-  const [latest, setLatest] = useState([]);
-  const [notifications, setNotifications] = useState([]);
 
-  // Fetch data from Supabase
+  // Fetch user’s own bots only
   useEffect(() => {
     const fetchBots = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
       const { data, error } = await supabase
         .from("bots")
         .select("*")
+        .eq("created_by", user.id)
         .order("created_at", { ascending: false });
+
       if (!error) setBots(data || []);
     };
 
-    const fetchPanels = async () => {
-      const { data, error } = await supabase
-        .from("panels")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (!error) setPanels(data || []);
-    };
-
-    const fetchLatest = async () => {
-      const { data: notificationsData } = await supabase
-        .from("notifications")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(3);
-
-      const { data: newsData } = await supabase
-        .from("news")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(3);
-
-      setLatest([
-        ...(notificationsData || []),
-        ...(newsData || []),
-      ]);
-    };
-
-    const fetchNotifications = async () => {
-      const { data } = await supabase
-        .from("notifications")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(3);
-      setNotifications(data || []);
-    };
-
     fetchBots();
-    fetchPanels();
-    fetchLatest();
-    fetchNotifications();
   }, []);
 
-  const tabs = [
-    { key: "bots", label: "Bots" },
-    { key: "panels", label: "Panels" },
-    { key: "latest", label: "Latest" },
-  ];
+  const tabs = [{ key: "bots", label: "Bots", icon: CpuChipIcon }];
 
   const sidebarLinks = [
-    { label: "Profile", href: "/profile", color: "green" },
-    { label: "API", href: "/api", color: "purple" },
-    { label: "Bots", href: "/bots", color: "cyan" },
-    { label: "Panels", href: "/panels", color: "pink" },
-    { label: "Web", href: "/web", color: "yellow" },
-    { label: "Support", href: "/support", color: "green" },
+    { label: "Bots", href: "/dashboard", icon: CpuChipIcon, color: "cyan" },
+    { label: "Post", href: "/post", icon: PlusCircleIcon, color: "green" },
   ];
 
   return (
     <div className="flex min-h-screen bg-black text-white">
       {/* Sidebar */}
       <aside
-        className={`fixed top-0 left-0 h-full w-64 bg-gray-900 p-6 transform transition-transform duration-500 ease-in-out z-50
+        className={`fixed top-0 left-0 h-full w-56 bg-gray-900 p-6 transform transition-transform duration-500 ease-in-out z-50
         ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0`}
       >
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-neon-green">CODEGRAM</h2>
+        <div className="flex justify-between items-center mb-8">
+          <h2 className="text-2xl font-extrabold text-neon-green">CODEGRAM</h2>
           <button className="md:hidden" onClick={() => setSidebarOpen(false)}>✕</button>
         </div>
         <nav className="space-y-4">
@@ -98,25 +56,23 @@ export default function UserDashboard() {
             <div
               key={link.href}
               onClick={() => router.push(link.href)}
-              className={`cursor-pointer hover:shadow-neon-${link.color} font-medium py-2 px-2 rounded transition-all`}
+              className={`flex items-center gap-3 cursor-pointer hover:shadow-neon-${link.color} py-2 px-3 rounded-lg transition-all`}
             >
-              {link.label}
+              <link.icon className="w-6 h-6 text-neon-green" />
+              <span className="font-medium">{link.label}</span>
             </div>
           ))}
         </nav>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 md:ml-64 p-6">
+      <main className="flex-1 md:ml-56 p-6">
         {/* Mobile Hamburger */}
         <div className="flex items-center justify-between mb-6 md:hidden">
-          <button
-            className="text-[#00FFFF]"
-            onClick={() => setSidebarOpen(true)}
-          >
+          <button className="text-neon-cyan" onClick={() => setSidebarOpen(true)}>
             <Bars3Icon className="w-8 h-8" />
           </button>
-          <span className="font-bold text-[#00FFFF] text-xl">CODEGRAM</span>
+          <span className="font-bold text-neon-green text-xl">CODEGRAM</span>
         </div>
 
         {/* Hero Section */}
@@ -146,14 +102,15 @@ export default function UserDashboard() {
         </div>
 
         {/* Tabs */}
-        <div className="flex justify-around mb-6">
+        <div className="flex justify-center mb-6">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 font-semibold rounded-lg transition-all
+              className={`flex items-center gap-2 px-5 py-2 font-semibold rounded-lg transition-all
               ${activeTab === tab.key ? "bg-neon-green text-black" : "bg-gray-800 text-white hover:bg-gray-700"}`}
             >
+              <tab.icon className="w-5 h-5" />
               {tab.label}
             </button>
           ))}
@@ -174,37 +131,7 @@ export default function UserDashboard() {
                 </div>
               ))
             ) : (
-              <p className="text-gray-400">Nothing is up yet</p>
-            ))}
-
-          {activeTab === "panels" &&
-            (panels.length ? (
-              panels.map((p) => (
-                <div
-                  key={p.id}
-                  className="p-4 rounded-lg bg-gray-800 hover:shadow-neon-pink transition-all"
-                >
-                  <h3 className="font-bold text-neon-pink">{p.title || "Untitled"}</h3>
-                  <p className="text-gray-400">{p.description || ""}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-400">Nothing is up yet</p>
-            ))}
-
-          {activeTab === "latest" &&
-            (latest.length ? (
-              latest.map((l) => (
-                <div
-                  key={l.id}
-                  className="p-4 rounded-lg bg-gray-800 hover:shadow-neon-cyan transition-all"
-                >
-                  <h3 className="font-bold text-neon-cyan">{l.title || l.name}</h3>
-                  <p className="text-gray-400">{l.content || l.description}</p>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-400">Nothing is up yet</p>
+              <p className="text-gray-400 text-center">🚀 Nothing here yet. Start by posting your first bot!</p>
             ))}
         </div>
 
