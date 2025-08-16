@@ -67,3 +67,43 @@ module.exports = {
     require("@tailwindcss/line-clamp"),
   ],
 };
+// tailwind.config.js
+const { fontFamily } = require("tailwindcss/defaultTheme")
+
+module.exports = {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}"
+  ],
+  theme: {
+    extend: {
+      colors: {
+        brand: {
+          green: "#00FFA3",
+          blue: "#00BFFF",
+          purple: "#8B5CF6",
+          yellow: "#FFD166",
+          red: "#FF4D6D",
+        },
+        dark: {
+          bg: "#0D0D0D",
+          card: "#1A1A1A",
+          border: "#2A2A2A",
+        },
+      },
+      fontFamily: {
+        sans: ["Inter", ...fontFamily.sans],
+        mono: ["Fira Code", ...fontFamily.mono],
+      },
+      boxShadow: {
+        glow: "0 0 20px rgba(0,255,163,0.3)",
+      },
+    },
+  },
+  plugins: [
+    require("@tailwindcss/forms"),
+    require("@tailwindcss/typography"),
+    require("@tailwindcss/aspect-ratio"),
+    require("@tailwindcss/line-clamp"),
+  ],
+    }
