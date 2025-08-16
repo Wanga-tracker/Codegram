@@ -1,8 +1,8 @@
-// pages/bots/[name].js
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabaseClient";
-import Link from "next/link";
+import { Bot, User, Link as LinkIcon, Download, Heart, ThumbsDown, MessageSquare, Github, Globe } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function BotDetails() {
   const router = useRouter();
@@ -14,142 +14,113 @@ export default function BotDetails() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (name) {
-      fetchData(name);
-    }
+    if (name) fetchData(name);
   }, [name]);
 
   async function fetchData(botName) {
     setLoading(true);
 
-    // Fetch bot details
-    const { data: botData, error: botError } = await supabase
+    const { data: botData } = await supabase
       .from("bots")
       .select("*")
       .eq("name", botName)
       .single();
-
-    if (botError) {
-      console.error(botError);
-      setLoading(false);
-      return;
-    }
     setBot(botData);
 
-    // Fetch developer details if exists
     const { data: devData } = await supabase
       .from("developers")
       .select("*")
       .eq("bot_name", botName)
       .maybeSingle();
-
     setDeveloper(devData);
 
-    // Fetch interactions (likes, dislikes, comments)
     const { data: interactionsData } = await supabase
       .from("bot_interactions")
       .select("*")
       .eq("bot_id", botData.bot_id);
-
     setInteractions(interactionsData || []);
     setLoading(false);
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-white">
-        Loading bot details...
-      </div>
-    );
+    return <div className="h-screen flex items-center justify-center text-brand-green">Loading...</div>;
   }
 
   if (!bot) {
-    return (
-      <div className="min-h-screen flex items-center justify-center text-red-500">
-        Bot not found!
-      </div>
-    );
+    return <div className="h-screen flex items-center justify-center text-red-500">Bot not found!</div>;
   }
 
-  const likesCount = interactions.filter(i => i.like).length;
-  const dislikesCount = interactions.filter(i => i.dislike).length;
+  const likes = interactions.filter(i => i.like).length;
+  const dislikes = interactions.filter(i => i.dislike).length;
   const comments = interactions.filter(i => i.comment);
 
   return (
-    <div className="min-h-screen bg-black text-white px-4 py-10">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <div className="min-h-screen bg-dark-bg text-white px-6 py-12">
+      <div className="max-w-5xl mx-auto space-y-10">
 
-        {/* BOT INFO */}
-        <div className="bg-gray-900 rounded-2xl p-6 shadow-lg border border-green-500">
-          <h2 className="text-2xl font-bold text-green-400 mb-4">🤖 Bot Info</h2>
-          <p><strong>Name:</strong> {bot.name}</p>
-          <p><strong>Developer:</strong> {bot.developer_name}</p>
-          <p><strong>Status:</strong> {bot.status}</p>
-          <p><strong>Version:</strong> {bot.version || "N/A"}</p>
-          <p><strong>Description:</strong> {bot.description}</p>
-        </div>
+        {/* HEADER */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }} 
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center space-y-4"
+        >
+          <h1 className="text-4xl font-extrabold bg-gradient-to-r from-brand-green to-brand-blue bg-clip-text text-transparent flex items-center justify-center gap-2">
+            <Bot /> {bot.name}
+          </h1>
+          <span className={`px-3 py-1 text-sm rounded-full ${
+            bot.status === "online" ? "bg-green-500/20 text-green-400" : 
+            bot.status === "offline" ? "bg-red-500/20 text-red-400" : "bg-yellow-500/20 text-yellow-400"
+          }`}>
+            {bot.status}
+          </span>
+          <p className="text-gray-400">{bot.description}</p>
+        </motion.div>
 
-        {/* DEVELOPER INFO */}
+        {/* DEVELOPER CARD */}
         {developer && (
-          <div className="bg-gray-900 rounded-2xl p-6 shadow-lg border border-blue-500">
-            <h2 className="text-2xl font-bold text-blue-400 mb-4">👨‍💻 Developer Info</h2>
-            <p><strong>Name:</strong> {developer.developer_name}</p>
-            <p>{developer.developer_description}</p>
-            <div className="mt-4 space-y-2">
-              {developer.github_link && (
-                <a href={developer.github_link} target="_blank" className="text-green-400 underline">GitHub</a>
-              )}
-              {developer.developer_site && (
-                <a href={developer.developer_site} target="_blank" className="block text-green-400 underline">Website</a>
-              )}
-              {developer.whatsapp_channel && (
-                <a href={developer.whatsapp_channel} target="_blank" className="block text-green-400 underline">WhatsApp Channel</a>
-              )}
-              {developer.whatsapp_group && (
-                <a href={developer.whatsapp_group} target="_blank" className="block text-green-400 underline">WhatsApp Group</a>
-              )}
-              {developer.whatsapp_number && (
-                <p className="block text-green-400">📞 {developer.whatsapp_number}</p>
-              )}
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="bg-dark-card p-6 rounded-2xl shadow-glow border border-dark-border">
+            <h2 className="text-xl font-bold flex items-center gap-2 text-brand-blue">
+              <User /> Developer
+            </h2>
+            <p className="mt-2">{developer.developer_description}</p>
+            <div className="mt-4 flex gap-4">
+              {developer.github_link && <a href={developer.github_link} target="_blank"><Github className="text-white hover:text-brand-green" /></a>}
+              {developer.developer_site && <a href={developer.developer_site} target="_blank"><Globe className="text-white hover:text-brand-green" /></a>}
             </div>
-          </div>
+          </motion.div>
         )}
 
-        {/* BOT URLS */}
-        <div className="bg-gray-900 rounded-2xl p-6 shadow-lg border border-purple-500">
-          <h2 className="text-2xl font-bold text-purple-400 mb-4">🔗 Bot Links</h2>
-          {bot.github_url && <a href={bot.github_url} target="_blank" className="text-green-400 underline block">GitHub</a>}
-          {bot.developer_site && <a href={bot.developer_site} target="_blank" className="text-green-400 underline block">Website</a>}
-        </div>
-
         {/* DOWNLOADS */}
-        <div className="bg-gray-900 rounded-2xl p-6 shadow-lg border border-yellow-500">
-          <h2 className="text-2xl font-bold text-yellow-400 mb-4">📥 Downloads</h2>
+        <motion.div whileHover={{ scale: 1.02 }} className="bg-dark-card p-6 rounded-2xl shadow-lg border border-dark-border text-center">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-brand-yellow">
+            <Download /> Download
+          </h2>
           {bot.zip_file_url ? (
-            <a href={bot.zip_file_url} download className="bg-green-500 px-4 py-2 rounded-lg text-black font-bold">Download ZIP</a>
-          ) : (
-            <p>No downloads available</p>
-          )}
-        </div>
+            <a href={bot.zip_file_url} download className="mt-4 inline-block bg-brand-green px-5 py-3 rounded-lg text-black font-bold shadow-glow">
+              Download ZIP
+            </a>
+          ) : <p className="text-gray-500">No downloads available</p>}
+        </motion.div>
 
         {/* INTERACTIONS */}
-        <div className="bg-gray-900 rounded-2xl p-6 shadow-lg border border-red-500">
-          <h2 className="text-2xl font-bold text-red-400 mb-4">❤️ Interactions</h2>
-          <p>👍 Likes: {likesCount}</p>
-          <p>👎 Dislikes: {dislikesCount}</p>
-          <div className="mt-4">
-            <h3 className="text-lg font-bold">💬 Comments</h3>
-            {comments.length > 0 ? (
-              comments.map((c, i) => (
-                <p key={i} className="border-b border-gray-700 py-2">{c.comment}</p>
-              ))
-            ) : (
-              <p>No comments yet.</p>
-            )}
+        <motion.div className="bg-dark-card p-6 rounded-2xl shadow-lg border border-dark-border">
+          <h2 className="text-xl font-bold flex items-center gap-2 text-brand-red">
+            <Heart /> Interactions
+          </h2>
+          <div className="flex gap-6 mt-4">
+            <span className="flex items-center gap-2 text-green-400"><Heart /> {likes}</span>
+            <span className="flex items-center gap-2 text-red-400"><ThumbsDown /> {dislikes}</span>
           </div>
-        </div>
-
+          <div className="mt-6">
+            <h3 className="font-semibold flex items-center gap-2"><MessageSquare /> Comments</h3>
+            <div className="mt-2 space-y-2">
+              {comments.length ? comments.map((c, i) => (
+                <p key={i} className="bg-dark-bg p-3 rounded-lg border border-dark-border">{c.comment}</p>
+              )) : <p className="text-gray-500">No comments yet.</p>}
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
-    }
+        }
